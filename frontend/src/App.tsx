@@ -11,6 +11,7 @@ import SharingPage from './pages/SharingPage'
 import TaxSettingsPage from './pages/TaxSettingsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
 import TrendsPage from './pages/TrendsPage'
+import HouseholdPage from './pages/HouseholdPage'
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useAuth()
@@ -36,6 +37,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <NavLink to="/savings">Savings</NavLink>
           <NavLink to="/investments">Investments</NavLink>
           <div className="nav-section">Account</div>
+          <NavLink to="/household">Household</NavLink>
           <NavLink to="/sharing">Sharing</NavLink>
           <NavLink to="/tax-settings">Tax settings</NavLink>
         </nav>
@@ -71,6 +73,7 @@ export default function App() {
           <Route path="/mortgages" element={<Protected page={<MortgagesPage />} />} />
           <Route path="/savings" element={<Protected page={<SavingsPage />} />} />
           <Route path="/investments" element={<Protected page={<InvestmentsPage />} />} />
+          <Route path="/household" element={<Protected page={<HouseholdPage />} />} />
           <Route path="/sharing" element={<Protected page={<SharingPage />} />} />
           <Route path="/tax-settings" element={<Protected page={<TaxSettingsPage />} />} />
           <Route path="*" element={<Navigate to="/" replace />} />

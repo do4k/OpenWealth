@@ -182,6 +182,43 @@ export interface HistoryResponse {
   events: AccrualEvent[]
 }
 
+export interface HouseholdMember {
+  linkId: string
+  displayName: string
+  email: string
+  linkedAtUtc: string
+}
+
+export interface HouseholdInvite {
+  linkId: string
+  displayName: string
+  email: string
+  sentAtUtc: string
+}
+
+export interface HouseholdView {
+  members: HouseholdMember[]
+  invitesSent: HouseholdInvite[]
+  invitesReceived: HouseholdInvite[]
+}
+
+export interface HouseholdMemberSummary {
+  displayName: string
+  isYou: boolean
+  netWorth: number
+  totalAssets: number
+  totalLiabilities: number
+  assetTotals: CategoryTotal[]
+  liabilityTotals: CategoryTotal[]
+}
+
+export interface HouseholdSummary {
+  combinedNetWorth: number
+  combinedAssets: number
+  combinedLiabilities: number
+  members: HouseholdMemberSummary[]
+}
+
 export interface PublicProfile {
   displayName: string
   visibility: ShareVisibility

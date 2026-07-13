@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ShareSettings> ShareSettings => Set<ShareSettings>();
     public DbSet<NetWorthSnapshot> NetWorthSnapshots => Set<NetWorthSnapshot>();
     public DbSet<AccrualEvent> AccrualEvents => Set<AccrualEvent>();
+    public DbSet<HouseholdLink> HouseholdLinks => Set<HouseholdLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +51,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(s => new { s.UserId, s.Date });
             e.HasOne<User>().WithMany().HasForeignKey(s => s.UserId);
+        });
+
+        modelBuilder.Entity<HouseholdLink>(e =>
+        {
+            e.HasIndex(l => new { l.InviterUserId, l.InviteeUserId }).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(l => l.InviterUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(l => l.InviteeUserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Property>()

@@ -37,6 +37,10 @@ read-only and passphrase-protected.
 - **Trends** — a chart of your recorded net worth history alongside a projection that
   runs the same payday rules forward (plus optional expected growth on investments):
   savings compounding upward, mortgages and student loans amortising down to zero.
+- **Household** — link accounts with the people you care about and see a combined
+  net worth alongside each member's totals. Everyone owns and edits only their own
+  data: invites can only target existing accounts (no shadow profiles), the invitee
+  must accept, and either side can unlink at any time.
 - **Sharing** — enable a public profile at a random URL, protected by a passphrase you
   choose. Pick what viewers see: net worth only, category totals, or the full breakdown.
   Rotate the link at any time to cut off old viewers.
