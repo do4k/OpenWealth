@@ -9,6 +9,10 @@ appsettings.Local.json
 *.db
 *.db-shm
 *.db-wal
+data/
+
+# Secrets
+.env
 
 # Node
 node_modules/

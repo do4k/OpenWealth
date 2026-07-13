@@ -1,5 +1,8 @@
-# Stage 1: build the React frontend
-FROM node:22-alpine AS frontend
+# Stage 1: build the React frontend.
+# Pinned to the build host's architecture: the output is static files, so when
+# cross-building for a Pi with buildx this stage runs natively instead of under
+# QEMU emulation. Building on the Pi itself is unaffected.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend
 WORKDIR /src
 COPY frontend/package*.json ./
 RUN npm ci

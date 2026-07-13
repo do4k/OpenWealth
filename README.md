@@ -41,11 +41,77 @@ read-only and passphrase-protected.
 ## Running with Docker (recommended)
 
 ```bash
-export JWT__KEY="$(openssl rand -base64 48)"   # persist this somewhere safe
-docker compose up --build
+cp .env.example .env
+sed -i "s|^JWT__KEY=.*|JWT__KEY=$(openssl rand -base64 48)|" .env
+docker compose up -d --build
 ```
 
 The app is served at http://localhost:8080 and the SQLite database lives in `./data`.
+
+## Hosting on a Raspberry Pi
+
+All images used are multi-arch, so the same compose file runs on a Pi. A Pi 3 or
+newer running the **64-bit** Raspberry Pi OS is recommended (.NET has no 32-bit
+Pi 1/Zero support).
+
+1. Install Docker (includes the compose plugin):
+
+   ```bash
+   curl -fsSL https://get.docker.com | sh
+   sudo usermod -aG docker $USER   # log out and back in afterwards
+   ```
+
+2. Clone the repo and create your `.env`:
+
+   ```bash
+   git clone https://github.com/do4k/OpenWealth.git && cd OpenWealth
+   cp .env.example .env
+   sed -i "s|^JWT__KEY=.*|JWT__KEY=$(openssl rand -base64 48)|" .env
+   ```
+
+3. Build and start (first build takes a few minutes on a Pi):
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   The app is now at `http://<pi-hostname-or-ip>:8080` from any device on your
+   network. `restart: unless-stopped` brings it back up after reboots, and the
+   container's logs are capped so they won't eat the SD card.
+
+### Backups
+
+Everything lives in one SQLite file. Copy `./data` somewhere safe on a schedule,
+e.g. a nightly cron entry:
+
+```bash
+0 2 * * * cp /home/pi/OpenWealth/data/openwealth.db /home/pi/backups/openwealth-$(date +\%a).db
+```
+
+### Updating
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+### Optional: build on your PC instead of the Pi
+
+Slow Pi builds can be avoided by cross-building on a faster machine with buildx
+(the frontend stage runs natively, so this is quick) and shipping the image over:
+
+```bash
+docker buildx build --platform linux/arm64 -t openwealth:latest --output type=docker,dest=openwealth.tar .
+scp openwealth.tar pi@raspberrypi:
+# on the Pi:
+docker load -i openwealth.tar && docker compose up -d
+```
+
+### Optional: HTTPS
+
+If you expose the app beyond your LAN, put it behind a reverse proxy with TLS
+(e.g. [Caddy](https://caddyserver.com/) gives automatic certificates with a
+two-line config) rather than exposing port 8080 directly.
 
 ## Running for development
 
