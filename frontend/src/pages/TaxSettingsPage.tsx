@@ -26,6 +26,16 @@ const SECTIONS: { title: string; fields: { key: NumericKey; label: string }[] }[
       { key: 'niUpperRatePercent', label: 'Upper rate (%)' },
     ],
   },
+  {
+    title: 'Childcare & child benefit',
+    fields: [
+      { key: 'childcareIncomeLimit', label: 'Free childcare income limit (£)' },
+      { key: 'hicbcLowerThreshold', label: 'Child benefit charge starts (£)' },
+      { key: 'hicbcUpperThreshold', label: 'Child benefit fully withdrawn (£)' },
+      { key: 'childBenefitFirstChildWeekly', label: 'Child benefit, first child (£/week)' },
+      { key: 'childBenefitAdditionalChildWeekly', label: 'Child benefit, other children (£/week)' },
+    ],
+  },
 ]
 
 export default function TaxSettingsPage() {

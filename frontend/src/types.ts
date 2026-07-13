@@ -70,6 +70,7 @@ export interface IncomeDetails {
   employerPensionPercent: number
   pensionMethod: PensionMethod
   pensionOnBonus: boolean
+  childrenReceivingChildBenefit: number
 }
 
 export interface TaxSettings {
@@ -85,6 +86,11 @@ export interface TaxSettings {
   niUpperEarningsLimitAnnual: number
   niMainRatePercent: number
   niUpperRatePercent: number
+  childcareIncomeLimit: number
+  hicbcLowerThreshold: number
+  hicbcUpperThreshold: number
+  childBenefitFirstChildWeekly: number
+  childBenefitAdditionalChildWeekly: number
 }
 
 export interface CategoryTotal {
@@ -98,10 +104,23 @@ export interface NetWorthItem {
   value: number
 }
 
+export interface FamilyBenefits {
+  adjustedNetIncome: number
+  childcareIncomeLimit: number
+  losesFreeChildcare: boolean
+  childcareHeadroom: number
+  childrenReceivingChildBenefit: number
+  annualChildBenefit: number
+  hicbcPercent: number
+  hicbcCharge: number
+  netChildBenefit: number
+}
+
 export interface TakeHomeBreakdown {
   grossIncome: number
   employeePensionContribution: number
   employerPensionContribution: number
+  adjustedNetIncome: number
   personalAllowance: number
   taxableIncome: number
   incomeTax: number
@@ -110,6 +129,7 @@ export interface TakeHomeBreakdown {
   totalStudentLoanRepayments: number
   annualTakeHome: number
   monthlyTakeHome: number
+  familyBenefits: FamilyBenefits
 }
 
 export interface WealthSummary {

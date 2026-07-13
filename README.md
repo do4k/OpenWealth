@@ -13,6 +13,10 @@ read-only and passphrase-protected.
 - **Income & tax** — salary, bonus and pension (salary sacrifice / net pay / relief at
   source). Income tax, National Insurance and student loan repayments are calculated
   automatically, including the personal allowance taper above £100k.
+- **Adjusted net income & family benefits** — shows your adjusted net income (the HMRC
+  measure behind the £100k free-childcare/Tax-Free Childcare cliff and the child benefit
+  charge), how much headroom you have below the limit, and — if you claim child benefit —
+  how much the High Income Child Benefit Charge claws back between £60k and £80k.
 - **UK student loans** — Plan 1, Plan 2, Plan 4, Plan 5 and Postgraduate loans.
   Interest rates are configured **globally per plan** (one rate applies to every loan of
   that plan), alongside per-plan repayment thresholds and rates.
@@ -82,5 +86,8 @@ dotnet test
 Calculations are annualised approximations of PAYE for England/Wales/NI rates, intended
 for planning rather than payroll: NI is actually assessed per pay period, concurrent
 Plan 1 + Plan 2 repayments have special rules, and relief-at-source higher-rate pension
-relief (claimed via self-assessment) is not modelled. Seeded 2025/26 figures and all
-thresholds are editable under **Tax settings** and **Student loans → Global plan settings**.
+relief (claimed via self-assessment) is not modelled. Adjusted net income is derived
+from salary, bonus and pension contributions only — other taxable income (savings
+interest, dividends, rental) and gift aid are not included. Seeded 2025/26 figures and
+all thresholds are editable under **Tax settings** and **Student loans → Global plan
+settings**.

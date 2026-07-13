@@ -25,7 +25,8 @@ public record IncomeRequest(
     decimal EmployeePensionPercent,
     decimal EmployerPensionPercent,
     PensionMethod PensionMethod,
-    bool PensionOnBonus);
+    bool PensionOnBonus,
+    int ChildrenReceivingChildBenefit);
 
 public static class PortfolioEndpoints
 {
@@ -308,6 +309,7 @@ public static class PortfolioEndpoints
             income.EmployerPensionPercent = req.EmployerPensionPercent;
             income.PensionMethod = req.PensionMethod;
             income.PensionOnBonus = req.PensionOnBonus;
+            income.ChildrenReceivingChildBenefit = Math.Max(0, req.ChildrenReceivingChildBenefit);
             await db.SaveChangesAsync();
             return Results.Ok(income);
         });
