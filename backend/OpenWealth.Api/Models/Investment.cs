@@ -17,4 +17,6 @@ public class Investment
     public required string Name { get; set; }
     public InvestmentType Type { get; set; }
     public decimal CurrentValue { get; set; }
+    /// <summary>Assumed annual growth used only for projections; balances are never changed automatically.</summary>
+    public decimal? ExpectedAnnualGrowthPercent { get; set; }
 }

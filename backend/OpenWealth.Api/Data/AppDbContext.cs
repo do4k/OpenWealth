@@ -15,6 +15,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SavingsAccount> SavingsAccounts => Set<SavingsAccount>();
     public DbSet<Investment> Investments => Set<Investment>();
     public DbSet<ShareSettings> ShareSettings => Set<ShareSettings>();
+    public DbSet<NetWorthSnapshot> NetWorthSnapshots => Set<NetWorthSnapshot>();
+    public DbSet<AccrualEvent> AccrualEvents => Set<AccrualEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +39,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<ShareSettings>()
             .HasIndex(s => s.Slug).IsUnique();
+
+        modelBuilder.Entity<NetWorthSnapshot>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.Date });
+            e.HasOne<User>().WithMany().HasForeignKey(s => s.UserId);
+        });
+
+        modelBuilder.Entity<AccrualEvent>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.Date });
+            e.HasOne<User>().WithMany().HasForeignKey(s => s.UserId);
+        });
 
         modelBuilder.Entity<Property>()
             .HasMany(p => p.Mortgages).WithOne().HasForeignKey(m => m.PropertyId)

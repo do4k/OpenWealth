@@ -1,0 +1,331 @@
+using OpenWealth.Api.Data;
+using OpenWealth.Api.Models;
+using OpenWealth.Api.Services;
+
+namespace OpenWealth.Tests;
+
+public class AccrualServiceTests
+{
+    private static User NewUser()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "t@example.com",
+            DisplayName = "T",
+            PasswordHash = "x",
+        };
+        user.TaxSettings = UkDefaults.NewTaxSettings(user.Id);
+        user.StudentLoanPlanSettings = UkDefaults.NewStudentLoanPlanSettings(user.Id);
+        return user;
+    }
+
+    private static readonly DateOnly Date = new(2026, 7, 25);
+
+    [Fact]
+    public void NextPayday_SameMonthWhenBeforePayday()
+    {
+        Assert.Equal(new DateOnly(2026, 7, 25), AccrualService.NextPayday(new DateOnly(2026, 7, 10), 25));
+    }
+
+    [Fact]
+    public void NextPayday_RollsToNextMonthOnOrAfterPayday()
+    {
+        Assert.Equal(new DateOnly(2026, 8, 25), AccrualService.NextPayday(new DateOnly(2026, 7, 25), 25));
+    }
+
+    [Fact]
+    public void NextPayday_ClampsShortMonths()
+    {
+        // Payday on the 31st lands on 28 Feb
+        Assert.Equal(new DateOnly(2027, 2, 28), AccrualService.NextPayday(new DateOnly(2027, 1, 31), 31));
+    }
+
+    [Fact]
+    public void SavingsGainMonthlyInterest()
+    {
+        var user = NewUser();
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "Saver", Type = SavingsAccountType.EasyAccess,
+            Balance = 12_000m, AnnualInterestRatePercent = 4.8m,
+        });
+
+        var events = AccrualService.ApplyMonthlyStep(user, Date);
+
+        // 12,000 * 4.8% / 12 = 48
+        Assert.Equal(12_048m, user.SavingsAccounts[0].Balance);
+        var e = Assert.Single(events);
+        Assert.Equal(48m, e.InterestAmount);
+        Assert.Equal("Savings", e.Category);
+    }
+
+    [Fact]
+    public void SavingsWithoutRateAreUntouched()
+    {
+        var user = NewUser();
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "Current", Type = SavingsAccountType.CurrentAccount,
+            Balance = 2_000m, AnnualInterestRatePercent = null,
+        });
+
+        var events = AccrualService.ApplyMonthlyStep(user, Date);
+
+        Assert.Equal(2_000m, user.SavingsAccounts[0].Balance);
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public void StudentLoanAccruesInterestAndRepayment()
+    {
+        var user = NewUser();
+        user.Income = new IncomeDetails { AnnualSalary = 40_000m };
+        user.StudentLoans.Add(new StudentLoan
+        {
+            Id = Guid.NewGuid(), Plan = StudentLoanPlan.Plan2, Balance = 30_000m,
+        });
+
+        var events = AccrualService.ApplyMonthlyStep(user, Date);
+
+        // Interest: 30,000 * 7.3% / 12 = 182.50
+        // Repayment: (40,000 - 28,470) * 9% / 12 = 86.48 (annual 1,037.70 rounds to /12 = 86.48)
+        var e = Assert.Single(events);
+        Assert.Equal(182.50m, e.InterestAmount);
+        Assert.Equal(86.48m, e.PaymentAmount);
+        Assert.Equal(30_000m + 182.50m - 86.48m, user.StudentLoans[0].Balance);
+    }
+
+    [Fact]
+    public void StudentLoanWithoutIncomeOnlyAccruesInterest()
+    {
+        var user = NewUser();
+        user.StudentLoans.Add(new StudentLoan
+        {
+            Id = Guid.NewGuid(), Plan = StudentLoanPlan.Plan5, Balance = 10_000m,
+        });
+
+        AccrualService.ApplyMonthlyStep(user, Date);
+
+        // 10,000 * 4.3% / 12 = 35.83
+        Assert.Equal(10_035.83m, user.StudentLoans[0].Balance);
+    }
+
+    [Fact]
+    public void RepaymentNeverOverpaysLoan()
+    {
+        var user = NewUser();
+        user.Income = new IncomeDetails { AnnualSalary = 80_000m };
+        user.StudentLoans.Add(new StudentLoan
+        {
+            Id = Guid.NewGuid(), Plan = StudentLoanPlan.Plan2, Balance = 50m,
+        });
+
+        AccrualService.ApplyMonthlyStep(user, Date);
+
+        Assert.Equal(0m, user.StudentLoans[0].Balance);
+    }
+
+    [Fact]
+    public void MortgageAmortisesMonthly()
+    {
+        var user = NewUser();
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "Home", OutstandingBalance = 200_000m,
+            AnnualInterestRatePercent = 5m, RateType = MortgageRateType.Variable,
+            TermMonthsRemaining = 300,
+        });
+
+        var events = AccrualService.ApplyMonthlyStep(user, Date);
+
+        // Payment 1,169.18; interest 200,000 * 5%/12 = 833.33
+        var e = Assert.Single(events);
+        Assert.Equal(833.33m, e.InterestAmount);
+        Assert.Equal(1_169.18m, e.PaymentAmount);
+        Assert.Equal(199_664.15m, user.Mortgages[0].OutstandingBalance);
+        Assert.Equal(299, user.Mortgages[0].TermMonthsRemaining);
+    }
+
+    [Fact]
+    public void MortgageUsesFollowOnRateAfterFixEnds()
+    {
+        var user = NewUser();
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "Home", OutstandingBalance = 100_000m,
+            AnnualInterestRatePercent = 2m, RateType = MortgageRateType.Fixed,
+            FixedRateEndDate = new DateOnly(2026, 1, 1), FollowOnRatePercent = 6m,
+            TermMonthsRemaining = 120,
+        });
+
+        var events = AccrualService.ApplyMonthlyStep(user, Date);
+
+        // Fix ended before the accrual date, so interest is at 6%: 100,000 * 6%/12 = 500
+        Assert.Equal(500m, events[0].InterestAmount);
+    }
+
+    [Fact]
+    public void CatchUpAppliesEachMissedPayday()
+    {
+        var user = NewUser();
+        user.Income = new IncomeDetails
+        {
+            AnnualSalary = 30_000m,
+            AutomationEnabled = true,
+            PaydayDayOfMonth = 15,
+            LastAccrualDate = new DateOnly(2026, 3, 15),
+        };
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "S", Type = SavingsAccountType.EasyAccess,
+            Balance = 10_000m, AnnualInterestRatePercent = 12m,
+        });
+
+        // Simulate the catch-up loop without a database
+        var applied = 0;
+        var due = AccrualService.NextPayday(user.Income.LastAccrualDate.Value, 15);
+        var today = new DateOnly(2026, 7, 20);
+        while (due <= today)
+        {
+            AccrualService.ApplyMonthlyStep(user, due);
+            applied++;
+            due = AccrualService.NextPayday(due, 15);
+        }
+
+        // April, May, June, July paydays = 4 months at 1%/month compounding
+        Assert.Equal(4, applied);
+        Assert.Equal(10_406.04m, user.SavingsAccounts[0].Balance);
+    }
+
+    [Fact]
+    public void SnapshotSumsCategories()
+    {
+        var user = NewUser();
+        user.Properties.Add(new Property { Id = Guid.NewGuid(), Name = "H", EstimatedValue = 300_000m });
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "M", OutstandingBalance = 180_000m, TermMonthsRemaining = 200,
+        });
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "S", Type = SavingsAccountType.EasyAccess, Balance = 5_000m,
+        });
+
+        var snap = AccrualService.TakeSnapshot(user, Date);
+
+        Assert.Equal(305_000m, snap.TotalAssets);
+        Assert.Equal(180_000m, snap.TotalLiabilities);
+        Assert.Equal(125_000m, snap.NetWorth);
+    }
+}
+
+public class ProjectionServiceTests
+{
+    private static User NewUser()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "p@example.com",
+            DisplayName = "P",
+            PasswordHash = "x",
+        };
+        user.TaxSettings = UkDefaults.NewTaxSettings(user.Id);
+        user.StudentLoanPlanSettings = UkDefaults.NewStudentLoanPlanSettings(user.Id);
+        return user;
+    }
+
+    [Fact]
+    public void SavingsTrendUpwardAndMortgagesDownward()
+    {
+        var user = NewUser();
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "S", Type = SavingsAccountType.EasyAccess,
+            Balance = 10_000m, AnnualInterestRatePercent = 4m,
+        });
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "M", OutstandingBalance = 150_000m,
+            AnnualInterestRatePercent = 4.5m, RateType = MortgageRateType.Variable,
+            TermMonthsRemaining = 240,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 24);
+
+        Assert.Equal(25, points.Count);
+        Assert.True(points[^1].Savings > points[0].Savings);
+        Assert.True(points[^1].Mortgages < points[0].Mortgages);
+        Assert.True(points[^1].NetWorth > points[0].NetWorth);
+    }
+
+    [Fact]
+    public void MortgageIsPaidOffAtEndOfTerm()
+    {
+        var user = NewUser();
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "M", OutstandingBalance = 50_000m,
+            AnnualInterestRatePercent = 5m, RateType = MortgageRateType.Variable,
+            TermMonthsRemaining = 24,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 30);
+
+        Assert.Equal(0m, points[^1].Mortgages);
+    }
+
+    [Fact]
+    public void ProjectionDoesNotMutateRealBalances()
+    {
+        var user = NewUser();
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "S", Type = SavingsAccountType.EasyAccess,
+            Balance = 10_000m, AnnualInterestRatePercent = 4m,
+        });
+
+        ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        Assert.Equal(10_000m, user.SavingsAccounts[0].Balance);
+    }
+
+    [Fact]
+    public void InvestmentGrowthOnlyAppliesWhenConfigured()
+    {
+        var user = NewUser();
+        user.Investments.Add(new Investment
+        {
+            Id = Guid.NewGuid(), Name = "ISA", Type = InvestmentType.StocksAndSharesIsa,
+            CurrentValue = 20_000m, ExpectedAnnualGrowthPercent = 6m,
+        });
+        user.Investments.Add(new Investment
+        {
+            Id = Guid.NewGuid(), Name = "Flat", Type = InvestmentType.Other,
+            CurrentValue = 5_000m, ExpectedAnnualGrowthPercent = null,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        // 20,000 growing at 0.5%/month for 12 months ≈ 21,233.56; flat one unchanged
+        Assert.Equal(26_233.56m, points[^1].Investments);
+    }
+
+    [Fact]
+    public void StudentLoanCanBeFullyRepaidInProjection()
+    {
+        var user = NewUser();
+        user.Income = new IncomeDetails { AnnualSalary = 60_000m };
+        user.StudentLoans.Add(new StudentLoan
+        {
+            Id = Guid.NewGuid(), Plan = StudentLoanPlan.Plan1, Balance = 2_000m,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        Assert.Equal(0m, points[^1].StudentLoans);
+        // Balance never goes negative on the way down
+        Assert.All(points, pt => Assert.True(pt.StudentLoans >= 0m));
+    }
+}

@@ -18,6 +18,7 @@ export default function InvestmentsPage() {
   const [name, setName] = useState('')
   const [type, setType] = useState<InvestmentType>('StocksAndSharesIsa')
   const [value, setValue] = useState('')
+  const [growth, setGrowth] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const load = () => {
@@ -29,8 +30,13 @@ export default function InvestmentsPage() {
     e.preventDefault()
     setError(null)
     try {
-      await api.post('/api/investments', { name, type, currentValue: Number(value) })
-      setName(''); setValue('')
+      await api.post('/api/investments', {
+        name,
+        type,
+        currentValue: Number(value),
+        expectedAnnualGrowthPercent: growth ? Number(growth) : null,
+      })
+      setName(''); setValue(''); setGrowth('')
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add investment.')
@@ -58,6 +64,7 @@ export default function InvestmentsPage() {
                 <th>Name</th>
                 <th>Type</th>
                 <th className="num">Current value</th>
+                <th className="num">Projected growth</th>
                 <th className="num"></th>
               </tr>
             </thead>
@@ -67,6 +74,9 @@ export default function InvestmentsPage() {
                   <td>{i.name}</td>
                   <td>{typeLabel(i.type)}</td>
                   <td className="num">{gbp.format(i.currentValue)}</td>
+                  <td className="num">
+                    {i.expectedAnnualGrowthPercent != null ? `${i.expectedAnnualGrowthPercent}%/yr` : '—'}
+                  </td>
                   <td className="num">
                     <div className="row-actions">
                       <button className="danger" onClick={() => remove(i.id)}>Remove</button>
@@ -94,6 +104,11 @@ export default function InvestmentsPage() {
             <label>Current value (£)</label>
             <input type="number" min="0" step="0.01" value={value}
               onChange={(e) => setValue(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label>Projected growth (%/yr, optional)</label>
+            <input type="number" min="-50" max="50" step="0.1" value={growth}
+              onChange={(e) => setGrowth(e.target.value)} />
           </div>
           <button type="submit">Add investment</button>
         </form>

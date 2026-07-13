@@ -29,6 +29,14 @@ read-only and passphrase-protected.
   and more, summed into your net worth.
 - **Dashboard** — net worth, assets vs liabilities, full item breakdown, and an annual
   income statement down to monthly take-home.
+- **Payday automation** — opt in and every payday (your chosen day of the month) savings
+  and ISAs earn a month of their interest, student loans accrue their plan rate and get a
+  month's repayment, and mortgages accrue interest and pay their amortised monthly
+  payment. Paydays missed while the server was off are caught up automatically, and every
+  change is recorded in an auditable payday history.
+- **Trends** — a chart of your recorded net worth history alongside a projection that
+  runs the same payday rules forward (plus optional expected growth on investments):
+  savings compounding upward, mortgages and student loans amortising down to zero.
 - **Sharing** — enable a public profile at a random URL, protected by a passphrase you
   choose. Pick what viewers see: net worth only, category totals, or the full breakdown.
   Rotate the link at any time to cut off old viewers.

@@ -10,6 +10,7 @@ import InvestmentsPage from './pages/InvestmentsPage'
 import SharingPage from './pages/SharingPage'
 import TaxSettingsPage from './pages/TaxSettingsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
+import TrendsPage from './pages/TrendsPage'
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useAuth()
@@ -28,6 +29,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
         <nav>
           <NavLink to="/" end>Dashboard</NavLink>
+          <NavLink to="/trends">Trends</NavLink>
           <NavLink to="/income">Income</NavLink>
           <NavLink to="/student-loans">Student loans</NavLink>
           <NavLink to="/mortgages">Mortgages &amp; property</NavLink>
@@ -63,6 +65,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/p/:slug" element={<PublicProfilePage />} />
           <Route path="/" element={<Protected page={<DashboardPage />} />} />
+          <Route path="/trends" element={<Protected page={<TrendsPage />} />} />
           <Route path="/income" element={<Protected page={<IncomePage />} />} />
           <Route path="/student-loans" element={<Protected page={<StudentLoansPage />} />} />
           <Route path="/mortgages" element={<Protected page={<MortgagesPage />} />} />
