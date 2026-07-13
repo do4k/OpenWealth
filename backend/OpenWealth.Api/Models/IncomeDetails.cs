@@ -24,4 +24,11 @@ public class IncomeDetails
     public bool PensionOnBonus { get; set; }
     /// <summary>Number of children child benefit is claimed for; drives the HICBC calculation.</summary>
     public int ChildrenReceivingChildBenefit { get; set; }
+
+    /// <summary>Day of the month interest and repayments are applied (clamped in short months).</summary>
+    public int PaydayDayOfMonth { get; set; } = 1;
+    /// <summary>Opt-in switch for the automatic payday accrual service.</summary>
+    public bool AutomationEnabled { get; set; }
+    /// <summary>Date the accrual service last ran for this user; paydays after this are due.</summary>
+    public DateOnly? LastAccrualDate { get; set; }
 }

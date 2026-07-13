@@ -61,6 +61,7 @@ export interface Investment {
   name: string
   type: InvestmentType
   currentValue: number
+  expectedAnnualGrowthPercent: number | null
 }
 
 export interface IncomeDetails {
@@ -147,6 +148,38 @@ export interface ShareSettings {
   slug: string | null
   visibility: ShareVisibility
   hasPassphrase: boolean
+}
+
+export interface AutomationSettings {
+  enabled: boolean
+  paydayDayOfMonth: number
+  lastAccrualDate: string | null
+}
+
+export interface WealthPoint {
+  date: string
+  netWorth: number
+  totalAssets: number
+  totalLiabilities: number
+  property: number
+  savings: number
+  investments: number
+  mortgages: number
+  studentLoans: number
+}
+
+export interface AccrualEvent {
+  date: string
+  category: string
+  itemName: string
+  interestAmount: number
+  paymentAmount: number
+  newBalance: number
+}
+
+export interface HistoryResponse {
+  snapshots: WealthPoint[]
+  events: AccrualEvent[]
 }
 
 export interface PublicProfile {

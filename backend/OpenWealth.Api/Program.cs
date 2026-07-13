@@ -16,6 +16,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<SummaryService>();
+builder.Services.AddScoped<AccrualService>();
+builder.Services.AddHostedService<AccrualWorker>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -52,6 +54,7 @@ app.MapAuthEndpoints();
 app.MapPortfolioEndpoints();
 app.MapSettingsEndpoints();
 app.MapShareEndpoints();
+app.MapAutomationEndpoints();
 
 // Serve the built React app (frontend/dist copied to wwwroot) in production.
 app.UseDefaultFiles();

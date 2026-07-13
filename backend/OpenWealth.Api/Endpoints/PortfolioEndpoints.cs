@@ -18,7 +18,8 @@ public record MortgageRequest(
     decimal? FollowOnRatePercent,
     int TermMonthsRemaining);
 public record SavingsRequest(string Name, SavingsAccountType Type, decimal Balance, decimal? AnnualInterestRatePercent);
-public record InvestmentRequest(string Name, InvestmentType Type, decimal CurrentValue);
+public record InvestmentRequest(
+    string Name, InvestmentType Type, decimal CurrentValue, decimal? ExpectedAnnualGrowthPercent);
 public record IncomeRequest(
     decimal AnnualSalary,
     decimal AnnualBonus,
@@ -259,6 +260,7 @@ public static class PortfolioEndpoints
                 Name = req.Name,
                 Type = req.Type,
                 CurrentValue = req.CurrentValue,
+                ExpectedAnnualGrowthPercent = req.ExpectedAnnualGrowthPercent,
             };
             db.Investments.Add(investment);
             await db.SaveChangesAsync();
@@ -272,6 +274,7 @@ public static class PortfolioEndpoints
             investment.Name = req.Name;
             investment.Type = req.Type;
             investment.CurrentValue = req.CurrentValue;
+            investment.ExpectedAnnualGrowthPercent = req.ExpectedAnnualGrowthPercent;
             await db.SaveChangesAsync();
             return Results.Ok(investment);
         });
