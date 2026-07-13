@@ -61,6 +61,57 @@ public class AccrualServiceTests
     }
 
     [Fact]
+    public void MonthlyDepositIsAddedAfterInterest()
+    {
+        var user = NewUser();
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "Regular saver", Type = SavingsAccountType.EasyAccess,
+            Balance = 12_000m, AnnualInterestRatePercent = 4.8m, MonthlyDeposit = 500m,
+        });
+
+        var events = AccrualService.ApplyMonthlyStep(user, Date);
+
+        // Interest on the pre-deposit balance only: 12,000 * 4.8%/12 = 48;
+        // the deposit starts earning next month.
+        var e = Assert.Single(events);
+        Assert.Equal(48m, e.InterestAmount);
+        Assert.Equal(500m, e.DepositAmount);
+        Assert.Equal(12_548m, user.SavingsAccounts[0].Balance);
+    }
+
+    [Fact]
+    public void DepositAppliesEvenWithoutAnInterestRate()
+    {
+        var user = NewUser();
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "Pot", Type = SavingsAccountType.Other,
+            Balance = 100m, AnnualInterestRatePercent = null, MonthlyDeposit = 250m,
+        });
+
+        var events = AccrualService.ApplyMonthlyStep(user, Date);
+
+        Assert.Equal(350m, user.SavingsAccounts[0].Balance);
+        Assert.Equal(250m, Assert.Single(events).DepositAmount);
+    }
+
+    [Fact]
+    public void NegativeDepositIsAStandingWithdrawalFlooredAtZero()
+    {
+        var user = NewUser();
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "Drawdown", Type = SavingsAccountType.EasyAccess,
+            Balance = 150m, AnnualInterestRatePercent = null, MonthlyDeposit = -200m,
+        });
+
+        AccrualService.ApplyMonthlyStep(user, Date);
+
+        Assert.Equal(0m, user.SavingsAccounts[0].Balance);
+    }
+
+    [Fact]
     public void SavingsWithoutRateAreUntouched()
     {
         var user = NewUser();
@@ -310,6 +361,23 @@ public class ProjectionServiceTests
 
         // 20,000 growing at 0.5%/month for 12 months ≈ 21,233.56; flat one unchanged
         Assert.Equal(26_233.56m, points[^1].Investments);
+    }
+
+    [Fact]
+    public void ProjectionCompoundsMonthlyDeposits()
+    {
+        var user = NewUser();
+        user.SavingsAccounts.Add(new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "S", Type = SavingsAccountType.EasyAccess,
+            Balance = 0m, AnnualInterestRatePercent = 12m, MonthlyDeposit = 100m,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        // Future value of £100/month deposited after 1%/month interest:
+        // 100 * ((1.01^12 - 1) / 0.01) = 1,268.25
+        Assert.Equal(1_268.25m, points[^1].Savings);
     }
 
     [Fact]

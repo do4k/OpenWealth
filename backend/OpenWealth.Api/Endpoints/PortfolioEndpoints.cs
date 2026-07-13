@@ -17,7 +17,12 @@ public record MortgageRequest(
     DateOnly? FixedRateEndDate,
     decimal? FollowOnRatePercent,
     int TermMonthsRemaining);
-public record SavingsRequest(string Name, SavingsAccountType Type, decimal Balance, decimal? AnnualInterestRatePercent);
+public record SavingsRequest(
+    string Name,
+    SavingsAccountType Type,
+    decimal Balance,
+    decimal? AnnualInterestRatePercent,
+    decimal MonthlyDeposit = 0m);
 public record InvestmentRequest(
     string Name, InvestmentType Type, decimal CurrentValue, decimal? ExpectedAnnualGrowthPercent);
 public record IncomeRequest(
@@ -218,6 +223,7 @@ public static class PortfolioEndpoints
                 Type = req.Type,
                 Balance = req.Balance,
                 AnnualInterestRatePercent = req.AnnualInterestRatePercent,
+                MonthlyDeposit = req.MonthlyDeposit,
             };
             db.SavingsAccounts.Add(account);
             await db.SaveChangesAsync();
@@ -232,6 +238,7 @@ public static class PortfolioEndpoints
             account.Type = req.Type;
             account.Balance = req.Balance;
             account.AnnualInterestRatePercent = req.AnnualInterestRatePercent;
+            account.MonthlyDeposit = req.MonthlyDeposit;
             await db.SaveChangesAsync();
             return Results.Ok(account);
         });

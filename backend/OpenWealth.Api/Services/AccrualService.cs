@@ -33,7 +33,8 @@ public class AccrualService(AppDbContext db, ILogger<AccrualService> logger)
     {
         var events = new List<AccrualEvent>();
 
-        void Record(string category, string name, decimal interest, decimal payment, decimal newBalance) =>
+        void Record(string category, string name, decimal interest, decimal payment, decimal newBalance,
+            decimal deposit = 0m) =>
             events.Add(new AccrualEvent
             {
                 Id = Guid.NewGuid(),
@@ -43,16 +44,21 @@ public class AccrualService(AppDbContext db, ILogger<AccrualService> logger)
                 ItemName = name,
                 InterestAmount = interest,
                 PaymentAmount = payment,
+                DepositAmount = deposit,
                 NewBalance = newBalance,
             });
 
         foreach (var account in user.SavingsAccounts)
         {
-            if (account.AnnualInterestRatePercent is not { } rate || rate == 0 || account.Balance <= 0)
+            // Interest is earned on the pre-deposit balance: this month's
+            // standing order starts earning from next month.
+            var rate = account.AnnualInterestRatePercent ?? 0m;
+            var interest = account.Balance > 0 ? Round2(account.Balance * rate / 100m / 12m) : 0m;
+            var deposit = account.MonthlyDeposit;
+            if (interest == 0 && deposit == 0)
                 continue;
-            var interest = Round2(account.Balance * rate / 100m / 12m);
-            account.Balance = Round2(account.Balance + interest);
-            Record("Savings", account.Name, interest, 0m, account.Balance);
+            account.Balance = Math.Max(0m, Round2(account.Balance + interest + deposit));
+            Record("Savings", account.Name, interest, 0m, account.Balance, deposit);
         }
 
         // A month's student loan repayment comes out of pay on payday; interest

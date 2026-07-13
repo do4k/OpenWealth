@@ -425,6 +425,7 @@ function EventsCard({ events }: { events: AccrualEvent[] }) {
               <th>Date</th>
               <th>Item</th>
               <th className="num">Interest</th>
+              <th className="num">Deposit</th>
               <th className="num">Payment</th>
               <th className="num">New balance</th>
             </tr>
@@ -435,6 +436,13 @@ function EventsCard({ events }: { events: AccrualEvent[] }) {
                 <td>{e.date}</td>
                 <td>{e.category}: {e.itemName}</td>
                 <td className="num">+{gbpExact.format(e.interestAmount)}</td>
+                <td className="num">
+                  {e.depositAmount > 0
+                    ? `+${gbpExact.format(e.depositAmount)}`
+                    : e.depositAmount < 0
+                      ? `−${gbpExact.format(-e.depositAmount)}`
+                      : '—'}
+                </td>
                 <td className="num">{e.paymentAmount > 0 ? `−${gbpExact.format(e.paymentAmount)}` : '—'}</td>
                 <td className="num">{gbpExact.format(e.newBalance)}</td>
               </tr>

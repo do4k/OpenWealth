@@ -26,7 +26,9 @@ read-only and passphrase-protected.
   onto a variable rate. Monthly repayments are computed by standard amortisation, and
   linked properties show your equity.
 - **Savings & investments** — cash accounts, ISAs, Premium Bonds, pension pots, GIAs
-  and more, summed into your net worth.
+  and more, summed into your net worth. Savings accounts can carry a monthly standing
+  order that payday automation deposits for you, compounding with interest in both the
+  recorded history and the projections.
 - **Dashboard** — net worth, assets vs liabilities, full item breakdown, and an annual
   income statement down to monthly take-home.
 - **Payday automation** — opt in and every payday (your chosen day of the month) savings
