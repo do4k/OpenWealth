@@ -54,6 +54,7 @@ export interface SavingsAccount {
   type: SavingsAccountType
   balance: number
   annualInterestRatePercent: number | null
+  monthlyDeposit: number
 }
 
 export interface Investment {
@@ -174,6 +175,7 @@ export interface AccrualEvent {
   itemName: string
   interestAmount: number
   paymentAmount: number
+  depositAmount: number
   newBalance: number
 }
 

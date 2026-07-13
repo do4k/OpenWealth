@@ -1,0 +1,88 @@
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using OpenWealth.Api.Contracts.Requests;
+using OpenWealth.Api.Data;
+using OpenWealth.Api.Extensions;
+using OpenWealth.Api.Models;
+using OpenWealth.Api.Services;
+
+namespace OpenWealth.Api.Endpoints;
+
+public static class MortgageEndpoints
+{
+    public static void MapMortgageEndpoints(this IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/mortgages").RequireAuthorization();
+
+        group.MapGet("/", async (ClaimsPrincipal p, AppDbContext db) =>
+        {
+            var mortgages = await db.Mortgages.AsNoTracking()
+                .Where(m => m.UserId == p.UserId()).ToListAsync();
+            return Results.Ok(mortgages.Select(ToResponse));
+        });
+
+        group.MapPost("/", async (MortgageRequest req, ClaimsPrincipal p, AppDbContext db) =>
+        {
+            var error = await ValidatePropertyLink(req.PropertyId, p.UserId(), db);
+            if (error is not null) return error;
+
+            var mortgage = new Mortgage { Id = Guid.NewGuid(), UserId = p.UserId(), Name = req.Name };
+            Apply(mortgage, req);
+            db.Mortgages.Add(mortgage);
+            await db.SaveChangesAsync();
+            return Results.Created($"/api/mortgages/{mortgage.Id}", ToResponse(mortgage));
+        });
+
+        group.MapPut("/{id:guid}", async (Guid id, MortgageRequest req, ClaimsPrincipal p, AppDbContext db) =>
+        {
+            var mortgage = await db.Mortgages.SingleOrDefaultAsync(m => m.Id == id && m.UserId == p.UserId());
+            if (mortgage is null) return Results.NotFound();
+            var error = await ValidatePropertyLink(req.PropertyId, p.UserId(), db);
+            if (error is not null) return error;
+            Apply(mortgage, req);
+            await db.SaveChangesAsync();
+            return Results.Ok(ToResponse(mortgage));
+        });
+
+        group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal p, AppDbContext db) =>
+        {
+            var deleted = await db.Mortgages
+                .Where(m => m.Id == id && m.UserId == p.UserId()).ExecuteDeleteAsync();
+            return deleted > 0 ? Results.NoContent() : Results.NotFound();
+        });
+    }
+
+    private static async Task<IResult?> ValidatePropertyLink(Guid? propertyId, Guid userId, AppDbContext db)
+    {
+        if (propertyId is null) return null;
+        var owned = await db.Properties.AnyAsync(x => x.Id == propertyId && x.UserId == userId);
+        return owned ? null : Results.BadRequest(new { error = "Linked property not found." });
+    }
+
+    private static void Apply(Mortgage m, MortgageRequest req)
+    {
+        m.Name = req.Name;
+        m.PropertyId = req.PropertyId;
+        m.OutstandingBalance = req.OutstandingBalance;
+        m.AnnualInterestRatePercent = req.AnnualInterestRatePercent;
+        m.RateType = req.RateType;
+        m.FixedRateEndDate = req.RateType == MortgageRateType.Fixed ? req.FixedRateEndDate : null;
+        m.FollowOnRatePercent = req.RateType == MortgageRateType.Fixed ? req.FollowOnRatePercent : null;
+        m.TermMonthsRemaining = req.TermMonthsRemaining;
+    }
+
+    private static object ToResponse(Mortgage m) => new
+    {
+        m.Id,
+        m.Name,
+        m.PropertyId,
+        m.OutstandingBalance,
+        m.AnnualInterestRatePercent,
+        m.RateType,
+        m.FixedRateEndDate,
+        m.FollowOnRatePercent,
+        m.TermMonthsRemaining,
+        MonthlyPayment = MortgageCalculator.MonthlyPayment(m),
+        IsFixedPeriodOver = MortgageCalculator.IsFixedPeriodOver(m, DateOnly.FromDateTime(DateTime.UtcNow)),
+    };
+}

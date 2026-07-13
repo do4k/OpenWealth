@@ -18,4 +18,9 @@ public class SavingsAccount
     public SavingsAccountType Type { get; set; }
     public decimal Balance { get; set; }
     public decimal? AnnualInterestRatePercent { get; set; }
+    /// <summary>
+    /// Standing order added to the balance every payday by the accrual service
+    /// and by projections. Negative values model a regular withdrawal.
+    /// </summary>
+    public decimal MonthlyDeposit { get; set; }
 }

@@ -51,7 +51,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
-app.MapPortfolioEndpoints();
+app.MapIncomeEndpoints();
+app.MapStudentLoanEndpoints();
+app.MapPropertyEndpoints();
+app.MapMortgageEndpoints();
+app.MapSavingsEndpoints();
+app.MapInvestmentEndpoints();
+app.MapSummaryEndpoints();
 app.MapSettingsEndpoints();
 app.MapShareEndpoints();
 app.MapAutomationEndpoints();

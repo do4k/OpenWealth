@@ -1,17 +1,8 @@
+using OpenWealth.Api.Contracts.Responses;
+using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
 
 namespace OpenWealth.Api.Services;
-
-public record ProjectionPoint(
-    DateOnly Date,
-    decimal NetWorth,
-    decimal TotalAssets,
-    decimal TotalLiabilities,
-    decimal Property,
-    decimal Savings,
-    decimal Investments,
-    decimal Mortgages,
-    decimal StudentLoans);
 
 /// <summary>
 /// Simulates future paydays month by month using the same stepping rules the
@@ -25,20 +16,20 @@ public static class ProjectionService
         // Work on a deep copy so simulating never mutates tracked entities.
         var sim = Clone(user);
         var payday = user.Income?.PaydayDayOfMonth ?? 1;
-        var points = new List<ProjectionPoint> { ToPoint(AccrualService.TakeSnapshot(sim, from)) };
+        var points = new List<ProjectionPoint> { ToPoint(MonthlyStepCalculator.TakeSnapshot(sim, from)) };
 
         var date = from;
         for (var i = 0; i < months; i++)
         {
-            date = AccrualService.NextPayday(date, payday);
-            AccrualService.ApplyMonthlyStep(sim, date);
+            date = MonthlyStepCalculator.NextPayday(date, payday);
+            MonthlyStepCalculator.ApplyMonthlyStep(sim, date);
             foreach (var investment in sim.Investments)
             {
                 if (investment.ExpectedAnnualGrowthPercent is { } growth && growth != 0)
-                    investment.CurrentValue = Math.Round(
-                        investment.CurrentValue * (1 + growth / 100m / 12m), 2, MidpointRounding.AwayFromZero);
+                    investment.CurrentValue =
+                        (investment.CurrentValue * (1 + growth / 100m / 12m)).RoundToPence();
             }
-            points.Add(ToPoint(AccrualService.TakeSnapshot(sim, date)));
+            points.Add(ToPoint(MonthlyStepCalculator.TakeSnapshot(sim, date)));
         }
         return points;
     }
@@ -74,6 +65,7 @@ public static class ProjectionService
         {
             Id = s.Id, Name = s.Name, Type = s.Type, Balance = s.Balance,
             AnnualInterestRatePercent = s.AnnualInterestRatePercent,
+            MonthlyDeposit = s.MonthlyDeposit,
         }).ToList(),
         Investments = user.Investments.Select(i => new Investment
         {

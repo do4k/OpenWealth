@@ -1,3 +1,4 @@
+using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
 
 namespace OpenWealth.Api.Services;
@@ -10,11 +11,11 @@ public static class MortgageCalculator
         if (balance <= 0 || termMonths <= 0)
             return 0m;
         if (annualRatePercent == 0)
-            return Math.Round(balance / termMonths, 2, MidpointRounding.AwayFromZero);
+            return (balance / termMonths).RoundToPence();
 
         var r = (double)(annualRatePercent / 100m / 12m);
         var payment = (double)balance * r / (1 - Math.Pow(1 + r, -termMonths));
-        return Math.Round((decimal)payment, 2, MidpointRounding.AwayFromZero);
+        return ((decimal)payment).RoundToPence();
     }
 
     public static decimal MonthlyPayment(Mortgage m) =>

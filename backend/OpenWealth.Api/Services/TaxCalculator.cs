@@ -1,37 +1,8 @@
+using OpenWealth.Api.Contracts.Responses;
+using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
 
 namespace OpenWealth.Api.Services;
-
-public record StudentLoanRepayment(StudentLoanPlan Plan, decimal AnnualRepayment);
-
-public record FamilyBenefits(
-    decimal AdjustedNetIncome,
-    decimal ChildcareIncomeLimit,
-    /// <summary>True when adjusted net income exceeds the free childcare / Tax-Free Childcare limit.</summary>
-    bool LosesFreeChildcare,
-    /// <summary>How far below the childcare limit you are (negative when over it).</summary>
-    decimal ChildcareHeadroom,
-    int ChildrenReceivingChildBenefit,
-    decimal AnnualChildBenefit,
-    /// <summary>Percentage of child benefit clawed back by the High Income Child Benefit Charge.</summary>
-    decimal HicbcPercent,
-    decimal HicbcCharge,
-    decimal NetChildBenefit);
-
-public record TakeHomeBreakdown(
-    decimal GrossIncome,
-    decimal EmployeePensionContribution,
-    decimal EmployerPensionContribution,
-    decimal AdjustedNetIncome,
-    decimal PersonalAllowance,
-    decimal TaxableIncome,
-    decimal IncomeTax,
-    decimal NationalInsurance,
-    List<StudentLoanRepayment> StudentLoanRepayments,
-    decimal TotalStudentLoanRepayments,
-    decimal AnnualTakeHome,
-    decimal MonthlyTakeHome,
-    FamilyBenefits FamilyBenefits);
 
 /// <summary>
 /// Annualised UK PAYE calculation: income tax (with personal allowance taper),
@@ -50,8 +21,8 @@ public static class TaxCalculator
         var gross = income.AnnualSalary + income.AnnualBonus;
 
         var pensionablePay = income.PensionOnBonus ? gross : income.AnnualSalary;
-        var employeePension = Round2(pensionablePay * income.EmployeePensionPercent / 100m);
-        var employerPension = Round2(pensionablePay * income.EmployerPensionPercent / 100m);
+        var employeePension = (pensionablePay * income.EmployeePensionPercent / 100m).RoundToPence();
+        var employerPension = (pensionablePay * income.EmployerPensionPercent / 100m).RoundToPence();
 
         // Salary sacrifice reduces pay before both tax and NI. Net-pay
         // arrangements reduce taxable pay only. Relief-at-source contributions
@@ -78,7 +49,7 @@ public static class TaxCalculator
             PensionMethod.ReliefAtSource => gross,
             _ => gross - employeePension,
         };
-        adjustedNetIncome = Math.Max(0m, Round2(adjustedNetIncome));
+        adjustedNetIncome = Math.Max(0m, adjustedNetIncome.RoundToPence());
 
         var personalAllowance = TaperedPersonalAllowance(adjustedNetIncome, tax);
         var taxableIncome = Math.Max(0m, payForTax - personalAllowance);
@@ -94,7 +65,7 @@ public static class TaxCalculator
             {
                 var s = settingsByPlan[plan];
                 var over = Math.Max(0m, payForNi - s.AnnualRepaymentThreshold);
-                return new StudentLoanRepayment(plan, Round2(over * s.RepaymentRatePercent / 100m));
+                return new StudentLoanRepayment(plan, (over * s.RepaymentRatePercent / 100m).RoundToPence());
             })
             .Where(r => r.AnnualRepayment > 0)
             .ToList();
@@ -113,8 +84,8 @@ public static class TaxCalculator
             NationalInsurance: nationalInsurance,
             StudentLoanRepayments: loanRepayments,
             TotalStudentLoanRepayments: totalLoanRepayments,
-            AnnualTakeHome: Round2(takeHome),
-            MonthlyTakeHome: Round2(takeHome / 12m),
+            AnnualTakeHome: takeHome.RoundToPence(),
+            MonthlyTakeHome: (takeHome / 12m).RoundToPence(),
             FamilyBenefits: CalculateFamilyBenefits(adjustedNetIncome, income.ChildrenReceivingChildBenefit, tax));
     }
 
@@ -122,8 +93,8 @@ public static class TaxCalculator
     {
         var benefit = children <= 0
             ? 0m
-            : Round2((tax.ChildBenefitFirstChildWeekly +
-                      tax.ChildBenefitAdditionalChildWeekly * (children - 1)) * 52m);
+            : ((tax.ChildBenefitFirstChildWeekly +
+                tax.ChildBenefitAdditionalChildWeekly * (children - 1)) * 52m).RoundToPence();
 
         // High Income Child Benefit Charge: 1% of the benefit is clawed back
         // per step of adjusted net income above the lower threshold, reaching
@@ -137,18 +108,18 @@ public static class TaxCalculator
             var step = band / 100m;
             hicbcPercent = Math.Min(100m, Math.Floor((adjustedNetIncome - tax.HicbcLowerThreshold) / step));
         }
-        var charge = Round2(benefit * hicbcPercent / 100m);
+        var charge = (benefit * hicbcPercent / 100m).RoundToPence();
 
         return new FamilyBenefits(
             AdjustedNetIncome: adjustedNetIncome,
             ChildcareIncomeLimit: tax.ChildcareIncomeLimit,
             LosesFreeChildcare: adjustedNetIncome > tax.ChildcareIncomeLimit,
-            ChildcareHeadroom: Round2(tax.ChildcareIncomeLimit - adjustedNetIncome),
+            ChildcareHeadroom: (tax.ChildcareIncomeLimit - adjustedNetIncome).RoundToPence(),
             ChildrenReceivingChildBenefit: Math.Max(0, children),
             AnnualChildBenefit: benefit,
             HicbcPercent: hicbcPercent,
             HicbcCharge: charge,
-            NetChildBenefit: Round2(benefit - charge));
+            NetChildBenefit: (benefit - charge).RoundToPence());
     }
 
     /// <summary>£1 of allowance is lost for every £2 of income over the taper threshold.</summary>
@@ -165,10 +136,9 @@ public static class TaxCalculator
         var basic = Math.Min(taxableIncome, tax.BasicRateLimit);
         var higher = Math.Clamp(taxableIncome - tax.BasicRateLimit, 0m, tax.HigherRateLimit - tax.BasicRateLimit);
         var additional = Math.Max(0m, taxableIncome - tax.HigherRateLimit);
-        return Round2(
-            basic * tax.BasicRatePercent / 100m +
-            higher * tax.HigherRatePercent / 100m +
-            additional * tax.AdditionalRatePercent / 100m);
+        return (basic * tax.BasicRatePercent / 100m +
+                higher * tax.HigherRatePercent / 100m +
+                additional * tax.AdditionalRatePercent / 100m).RoundToPence();
     }
 
     public static decimal NationalInsurance(decimal earnings, TaxSettings tax)
@@ -176,8 +146,6 @@ public static class TaxCalculator
         var main = Math.Clamp(earnings - tax.NiPrimaryThresholdAnnual, 0m,
             tax.NiUpperEarningsLimitAnnual - tax.NiPrimaryThresholdAnnual);
         var upper = Math.Max(0m, earnings - tax.NiUpperEarningsLimitAnnual);
-        return Round2(main * tax.NiMainRatePercent / 100m + upper * tax.NiUpperRatePercent / 100m);
+        return (main * tax.NiMainRatePercent / 100m + upper * tax.NiUpperRatePercent / 100m).RoundToPence();
     }
-
-    private static decimal Round2(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 }

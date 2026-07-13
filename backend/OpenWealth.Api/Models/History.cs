@@ -33,5 +33,7 @@ public class AccrualEvent
     public required string ItemName { get; set; }
     public decimal InterestAmount { get; set; }
     public decimal PaymentAmount { get; set; }
+    /// <summary>Money put in on payday (a standing-order deposit into savings).</summary>
+    public decimal DepositAmount { get; set; }
     public decimal NewBalance { get; set; }
 }

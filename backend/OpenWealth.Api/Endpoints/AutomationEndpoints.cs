@@ -1,11 +1,11 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using OpenWealth.Api.Contracts.Requests;
 using OpenWealth.Api.Data;
+using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Services;
 
 namespace OpenWealth.Api.Endpoints;
-
-public record AutomationSettingsRequest(bool Enabled, int PaydayDayOfMonth);
 
 public static class AutomationEndpoints
 {
@@ -44,7 +44,7 @@ public static class AutomationEndpoints
                 var today = DateOnly.FromDateTime(DateTime.UtcNow);
                 user.Income.LastAccrualDate ??= today;
                 if (!await db.NetWorthSnapshots.AnyAsync(s => s.UserId == user.Id && s.Date == today))
-                    db.NetWorthSnapshots.Add(AccrualService.TakeSnapshot(user, today));
+                    db.NetWorthSnapshots.Add(MonthlyStepCalculator.TakeSnapshot(user, today));
             }
             await db.SaveChangesAsync();
             return Results.Ok(new

@@ -19,6 +19,7 @@ export default function SavingsPage() {
   const [type, setType] = useState<SavingsAccountType>('EasyAccess')
   const [balance, setBalance] = useState('')
   const [rate, setRate] = useState('')
+  const [deposit, setDeposit] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const load = () => {
@@ -35,8 +36,9 @@ export default function SavingsPage() {
         type,
         balance: Number(balance),
         annualInterestRatePercent: rate ? Number(rate) : null,
+        monthlyDeposit: deposit ? Number(deposit) : 0,
       })
-      setName(''); setBalance(''); setRate('')
+      setName(''); setBalance(''); setRate(''); setDeposit('')
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add account.')
@@ -65,6 +67,7 @@ export default function SavingsPage() {
                 <th>Type</th>
                 <th className="num">Balance</th>
                 <th className="num">Rate</th>
+                <th className="num">Monthly deposit</th>
                 <th className="num"></th>
               </tr>
             </thead>
@@ -75,6 +78,7 @@ export default function SavingsPage() {
                   <td>{typeLabel(a.type)}</td>
                   <td className="num">{gbp.format(a.balance)}</td>
                   <td className="num">{a.annualInterestRatePercent != null ? `${a.annualInterestRatePercent}%` : '—'}</td>
+                  <td className="num">{a.monthlyDeposit !== 0 ? gbp.format(a.monthlyDeposit) : '—'}</td>
                   <td className="num">
                     <div className="row-actions">
                       <button className="danger" onClick={() => remove(a.id)}>Remove</button>
@@ -107,6 +111,12 @@ export default function SavingsPage() {
             <label>Interest rate (%, optional)</label>
             <input type="number" min="0" max="100" step="0.01" value={rate}
               onChange={(e) => setRate(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Monthly deposit (£, optional)</label>
+            <input type="number" step="0.01" value={deposit}
+              onChange={(e) => setDeposit(e.target.value)} />
+            <span className="muted">Added every payday; negative for a regular withdrawal.</span>
           </div>
           <button type="submit">Add account</button>
         </form>
