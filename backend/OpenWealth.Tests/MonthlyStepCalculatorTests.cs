@@ -1,10 +1,11 @@
+using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Data;
 using OpenWealth.Api.Models;
 using OpenWealth.Api.Services;
 
 namespace OpenWealth.Tests;
 
-public class AccrualServiceTests
+public class MonthlyStepCalculatorTests
 {
     private static User NewUser()
     {
@@ -25,20 +26,20 @@ public class AccrualServiceTests
     [Fact]
     public void NextPayday_SameMonthWhenBeforePayday()
     {
-        Assert.Equal(new DateOnly(2026, 7, 25), AccrualService.NextPayday(new DateOnly(2026, 7, 10), 25));
+        Assert.Equal(new DateOnly(2026, 7, 25), MonthlyStepCalculator.NextPayday(new DateOnly(2026, 7, 10), 25));
     }
 
     [Fact]
     public void NextPayday_RollsToNextMonthOnOrAfterPayday()
     {
-        Assert.Equal(new DateOnly(2026, 8, 25), AccrualService.NextPayday(new DateOnly(2026, 7, 25), 25));
+        Assert.Equal(new DateOnly(2026, 8, 25), MonthlyStepCalculator.NextPayday(new DateOnly(2026, 7, 25), 25));
     }
 
     [Fact]
     public void NextPayday_ClampsShortMonths()
     {
         // Payday on the 31st lands on 28 Feb
-        Assert.Equal(new DateOnly(2027, 2, 28), AccrualService.NextPayday(new DateOnly(2027, 1, 31), 31));
+        Assert.Equal(new DateOnly(2027, 2, 28), MonthlyStepCalculator.NextPayday(new DateOnly(2027, 1, 31), 31));
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class AccrualServiceTests
             Balance = 12_000m, AnnualInterestRatePercent = 4.8m,
         });
 
-        var events = AccrualService.ApplyMonthlyStep(user, Date);
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         // 12,000 * 4.8% / 12 = 48
         Assert.Equal(12_048m, user.SavingsAccounts[0].Balance);
@@ -70,7 +71,7 @@ public class AccrualServiceTests
             Balance = 12_000m, AnnualInterestRatePercent = 4.8m, MonthlyDeposit = 500m,
         });
 
-        var events = AccrualService.ApplyMonthlyStep(user, Date);
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         // Interest on the pre-deposit balance only: 12,000 * 4.8%/12 = 48;
         // the deposit starts earning next month.
@@ -90,7 +91,7 @@ public class AccrualServiceTests
             Balance = 100m, AnnualInterestRatePercent = null, MonthlyDeposit = 250m,
         });
 
-        var events = AccrualService.ApplyMonthlyStep(user, Date);
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         Assert.Equal(350m, user.SavingsAccounts[0].Balance);
         Assert.Equal(250m, Assert.Single(events).DepositAmount);
@@ -106,7 +107,7 @@ public class AccrualServiceTests
             Balance = 150m, AnnualInterestRatePercent = null, MonthlyDeposit = -200m,
         });
 
-        AccrualService.ApplyMonthlyStep(user, Date);
+        MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         Assert.Equal(0m, user.SavingsAccounts[0].Balance);
     }
@@ -121,7 +122,7 @@ public class AccrualServiceTests
             Balance = 2_000m, AnnualInterestRatePercent = null,
         });
 
-        var events = AccrualService.ApplyMonthlyStep(user, Date);
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         Assert.Equal(2_000m, user.SavingsAccounts[0].Balance);
         Assert.Empty(events);
@@ -137,7 +138,7 @@ public class AccrualServiceTests
             Id = Guid.NewGuid(), Plan = StudentLoanPlan.Plan2, Balance = 30_000m,
         });
 
-        var events = AccrualService.ApplyMonthlyStep(user, Date);
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         // Interest: 30,000 * 7.3% / 12 = 182.50
         // Repayment: (40,000 - 28,470) * 9% / 12 = 86.48 (annual 1,037.70 rounds to /12 = 86.48)
@@ -156,7 +157,7 @@ public class AccrualServiceTests
             Id = Guid.NewGuid(), Plan = StudentLoanPlan.Plan5, Balance = 10_000m,
         });
 
-        AccrualService.ApplyMonthlyStep(user, Date);
+        MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         // 10,000 * 4.3% / 12 = 35.83
         Assert.Equal(10_035.83m, user.StudentLoans[0].Balance);
@@ -172,7 +173,7 @@ public class AccrualServiceTests
             Id = Guid.NewGuid(), Plan = StudentLoanPlan.Plan2, Balance = 50m,
         });
 
-        AccrualService.ApplyMonthlyStep(user, Date);
+        MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         Assert.Equal(0m, user.StudentLoans[0].Balance);
     }
@@ -188,7 +189,7 @@ public class AccrualServiceTests
             TermMonthsRemaining = 300,
         });
 
-        var events = AccrualService.ApplyMonthlyStep(user, Date);
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         // Payment 1,169.18; interest 200,000 * 5%/12 = 833.33
         var e = Assert.Single(events);
@@ -210,7 +211,7 @@ public class AccrualServiceTests
             TermMonthsRemaining = 120,
         });
 
-        var events = AccrualService.ApplyMonthlyStep(user, Date);
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         // Fix ended before the accrual date, so interest is at 6%: 100,000 * 6%/12 = 500
         Assert.Equal(500m, events[0].InterestAmount);
@@ -235,13 +236,13 @@ public class AccrualServiceTests
 
         // Simulate the catch-up loop without a database
         var applied = 0;
-        var due = AccrualService.NextPayday(user.Income.LastAccrualDate.Value, 15);
+        var due = MonthlyStepCalculator.NextPayday(user.Income.LastAccrualDate.Value, 15);
         var today = new DateOnly(2026, 7, 20);
         while (due <= today)
         {
-            AccrualService.ApplyMonthlyStep(user, due);
+            MonthlyStepCalculator.ApplyMonthlyStep(user, due);
             applied++;
-            due = AccrualService.NextPayday(due, 15);
+            due = MonthlyStepCalculator.NextPayday(due, 15);
         }
 
         // April, May, June, July paydays = 4 months at 1%/month compounding
@@ -263,7 +264,7 @@ public class AccrualServiceTests
             Id = Guid.NewGuid(), Name = "S", Type = SavingsAccountType.EasyAccess, Balance = 5_000m,
         });
 
-        var snap = AccrualService.TakeSnapshot(user, Date);
+        var snap = MonthlyStepCalculator.TakeSnapshot(user, Date);
 
         Assert.Equal(305_000m, snap.TotalAssets);
         Assert.Equal(180_000m, snap.TotalLiabilities);

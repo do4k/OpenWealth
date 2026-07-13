@@ -1,34 +1,10 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using OpenWealth.Api.Contracts.Requests;
 using OpenWealth.Api.Data;
-using OpenWealth.Api.Models;
+using OpenWealth.Api.Extensions;
 
 namespace OpenWealth.Api.Endpoints;
-
-public record TaxSettingsRequest(
-    string TaxYearLabel,
-    decimal PersonalAllowance,
-    decimal PersonalAllowanceTaperThreshold,
-    decimal BasicRateLimit,
-    decimal HigherRateLimit,
-    decimal BasicRatePercent,
-    decimal HigherRatePercent,
-    decimal AdditionalRatePercent,
-    decimal NiPrimaryThresholdAnnual,
-    decimal NiUpperEarningsLimitAnnual,
-    decimal NiMainRatePercent,
-    decimal NiUpperRatePercent,
-    decimal ChildcareIncomeLimit,
-    decimal HicbcLowerThreshold,
-    decimal HicbcUpperThreshold,
-    decimal ChildBenefitFirstChildWeekly,
-    decimal ChildBenefitAdditionalChildWeekly);
-
-public record LoanPlanSettingRequest(
-    StudentLoanPlan Plan,
-    decimal AnnualRepaymentThreshold,
-    decimal RepaymentRatePercent,
-    decimal InterestRatePercent);
 
 public static class SettingsEndpoints
 {

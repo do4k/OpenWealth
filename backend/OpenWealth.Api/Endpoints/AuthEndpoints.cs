@@ -1,15 +1,14 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OpenWealth.Api.Contracts.Requests;
+using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Data;
+using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
 using OpenWealth.Api.Services;
 
 namespace OpenWealth.Api.Endpoints;
-
-public record RegisterRequest(string Email, string Password, string DisplayName);
-public record LoginRequest(string Email, string Password);
-public record AuthResponse(string Token, string Email, string DisplayName);
 
 public static class AuthEndpoints
 {
@@ -67,14 +66,5 @@ public static class AuthEndpoints
             var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == principal.UserId());
             return Results.Ok(new { user.Email, user.DisplayName });
         }).RequireAuthorization();
-    }
-
-    /// <summary>Reads the authenticated user id from the JWT subject claim.</summary>
-    public static Guid UserId(this ClaimsPrincipal principal)
-    {
-        var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? principal.FindFirstValue("sub")
-            ?? throw new InvalidOperationException("Authenticated principal has no subject claim.");
-        return Guid.Parse(sub);
     }
 }

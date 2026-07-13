@@ -1,21 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Data;
-using OpenWealth.Api.Models;
 
 namespace OpenWealth.Api.Services;
-
-public record CategoryTotal(string Category, decimal Total);
-
-public record NetWorthItem(string Category, string Name, decimal Value);
-
-public record WealthSummary(
-    decimal NetWorth,
-    decimal TotalAssets,
-    decimal TotalLiabilities,
-    List<CategoryTotal> AssetTotals,
-    List<CategoryTotal> LiabilityTotals,
-    List<NetWorthItem> Items,
-    TakeHomeBreakdown? TakeHome);
 
 public class SummaryService(AppDbContext db)
 {

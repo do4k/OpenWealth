@@ -2,14 +2,13 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OpenWealth.Api.Contracts.Requests;
 using OpenWealth.Api.Data;
+using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
 using OpenWealth.Api.Services;
 
 namespace OpenWealth.Api.Endpoints;
-
-public record ShareSettingsRequest(bool Enabled, string? Passphrase, ShareVisibility Visibility);
-public record PublicProfileRequest(string Passphrase);
 
 public static class ShareEndpoints
 {
