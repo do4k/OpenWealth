@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{7DA9493E-49A3-4E3B-ADAB-5240C2F5CFD3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWealth.Api", "backend\OpenWealth.Api\OpenWealth.Api.csproj", "{AFCE1BA9-5D9B-4E05-BE46-7E60D1C682BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWealth.Tests", "backend\OpenWealth.Tests\OpenWealth.Tests.csproj", "{61ABAE88-3BFB-4113-81CF-05909011B334}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AFCE1BA9-5D9B-4E05-BE46-7E60D1C682BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFCE1BA9-5D9B-4E05-BE46-7E60D1C682BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFCE1BA9-5D9B-4E05-BE46-7E60D1C682BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFCE1BA9-5D9B-4E05-BE46-7E60D1C682BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61ABAE88-3BFB-4113-81CF-05909011B334}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61ABAE88-3BFB-4113-81CF-05909011B334}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61ABAE88-3BFB-4113-81CF-05909011B334}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61ABAE88-3BFB-4113-81CF-05909011B334}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{AFCE1BA9-5D9B-4E05-BE46-7E60D1C682BB} = {7DA9493E-49A3-4E3B-ADAB-5240C2F5CFD3}
+		{61ABAE88-3BFB-4113-81CF-05909011B334} = {7DA9493E-49A3-4E3B-ADAB-5240C2F5CFD3}
+	EndGlobalSection
+EndGlobal
