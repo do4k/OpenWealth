@@ -22,4 +22,6 @@ public class IncomeDetails
     public PensionMethod PensionMethod { get; set; } = PensionMethod.SalarySacrifice;
     /// <summary>Whether pension percentages also apply to the bonus.</summary>
     public bool PensionOnBonus { get; set; }
+    /// <summary>Number of children child benefit is claimed for; drives the HICBC calculation.</summary>
+    public int ChildrenReceivingChildBenefit { get; set; }
 }

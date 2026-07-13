@@ -25,4 +25,13 @@ public class TaxSettings
     public decimal NiUpperEarningsLimitAnnual { get; set; }
     public decimal NiMainRatePercent { get; set; }
     public decimal NiUpperRatePercent { get; set; }
+
+    /// <summary>Adjusted net income above this loses free childcare hours and Tax-Free Childcare.</summary>
+    public decimal ChildcareIncomeLimit { get; set; }
+    /// <summary>Adjusted net income where the High Income Child Benefit Charge starts.</summary>
+    public decimal HicbcLowerThreshold { get; set; }
+    /// <summary>Adjusted net income where child benefit is fully clawed back.</summary>
+    public decimal HicbcUpperThreshold { get; set; }
+    public decimal ChildBenefitFirstChildWeekly { get; set; }
+    public decimal ChildBenefitAdditionalChildWeekly { get; set; }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, gbp, gbpExact } from '../api'
-import type { WealthSummary } from '../types'
+import type { FamilyBenefits, WealthSummary } from '../types'
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<WealthSummary | null>(null)
@@ -82,6 +82,13 @@ export default function DashboardPage() {
           <table>
             <tbody>
               <tr>
+                <td>
+                  Adjusted net income
+                  <span className="muted"> (personal allowance, childcare &amp; child benefit tests)</span>
+                </td>
+                <td className="num">{gbpExact.format(th.adjustedNetIncome)}</td>
+              </tr>
+              <tr>
                 <td>Income tax</td>
                 <td className="num">−{gbpExact.format(th.incomeTax)}</td>
               </tr>
@@ -114,6 +121,62 @@ export default function DashboardPage() {
           </table>
         </div>
       )}
+
+      {th && <FamilyBenefitsCard fb={th.familyBenefits} />}
     </>
+  )
+}
+
+function FamilyBenefitsCard({ fb }: { fb: FamilyBenefits }) {
+  const hasChildren = fb.childrenReceivingChildBenefit > 0
+  return (
+    <div className="card">
+      <h2>Childcare &amp; child benefit</h2>
+      <p className="muted">
+        Based on your adjusted net income of {gbpExact.format(fb.adjustedNetIncome)} — salary and
+        bonus minus pension contributions (grossed up for relief-at-source).
+      </p>
+
+      {fb.losesFreeChildcare ? (
+        <div className="error-box">
+          Over the {gbp.format(fb.childcareIncomeLimit)} limit by{' '}
+          {gbp.format(-fb.childcareHeadroom)} — you lose free childcare hours and Tax-Free
+          Childcare eligibility. Extra pension contributions could bring you back under.
+        </div>
+      ) : (
+        <div className="success-box">
+          {gbp.format(fb.childcareHeadroom)} below the {gbp.format(fb.childcareIncomeLimit)}{' '}
+          adjusted net income limit — free childcare hours and Tax-Free Childcare are unaffected.
+        </div>
+      )}
+
+      {hasChildren ? (
+        <table>
+          <tbody>
+            <tr>
+              <td>Child benefit ({fb.childrenReceivingChildBenefit}{' '}
+                {fb.childrenReceivingChildBenefit === 1 ? 'child' : 'children'})</td>
+              <td className="num">{gbpExact.format(fb.annualChildBenefit)}</td>
+            </tr>
+            <tr>
+              <td>
+                High income charge
+                {fb.hicbcPercent > 0 && <span className="muted"> ({fb.hicbcPercent}% clawed back)</span>}
+              </td>
+              <td className="num">−{gbpExact.format(fb.hicbcCharge)}</td>
+            </tr>
+            <tr>
+              <td><strong>Child benefit kept</strong></td>
+              <td className="num"><strong>{gbpExact.format(fb.netChildBenefit)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      ) : (
+        <p className="muted">
+          Claiming child benefit? Set the number of children on the{' '}
+          <Link to="/income">income page</Link> to see the high income charge.
+        </p>
+      )}
+    </div>
   )
 }

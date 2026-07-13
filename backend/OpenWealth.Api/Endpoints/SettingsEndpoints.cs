@@ -17,7 +17,12 @@ public record TaxSettingsRequest(
     decimal NiPrimaryThresholdAnnual,
     decimal NiUpperEarningsLimitAnnual,
     decimal NiMainRatePercent,
-    decimal NiUpperRatePercent);
+    decimal NiUpperRatePercent,
+    decimal ChildcareIncomeLimit,
+    decimal HicbcLowerThreshold,
+    decimal HicbcUpperThreshold,
+    decimal ChildBenefitFirstChildWeekly,
+    decimal ChildBenefitAdditionalChildWeekly);
 
 public record LoanPlanSettingRequest(
     StudentLoanPlan Plan,
@@ -49,6 +54,11 @@ public static class SettingsEndpoints
             settings.NiUpperEarningsLimitAnnual = req.NiUpperEarningsLimitAnnual;
             settings.NiMainRatePercent = req.NiMainRatePercent;
             settings.NiUpperRatePercent = req.NiUpperRatePercent;
+            settings.ChildcareIncomeLimit = req.ChildcareIncomeLimit;
+            settings.HicbcLowerThreshold = req.HicbcLowerThreshold;
+            settings.HicbcUpperThreshold = req.HicbcUpperThreshold;
+            settings.ChildBenefitFirstChildWeekly = req.ChildBenefitFirstChildWeekly;
+            settings.ChildBenefitAdditionalChildWeekly = req.ChildBenefitAdditionalChildWeekly;
             await db.SaveChangesAsync();
             return Results.Ok(settings);
         });

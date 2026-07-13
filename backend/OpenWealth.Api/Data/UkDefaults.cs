@@ -25,6 +25,11 @@ public static class UkDefaults
         NiUpperEarningsLimitAnnual = 50_270m,
         NiMainRatePercent = 8m,
         NiUpperRatePercent = 2m,
+        ChildcareIncomeLimit = 100_000m,
+        HicbcLowerThreshold = 60_000m,
+        HicbcUpperThreshold = 80_000m,
+        ChildBenefitFirstChildWeekly = 26.05m,
+        ChildBenefitAdditionalChildWeekly = 17.25m,
     };
 
     public static List<StudentLoanPlanSetting> NewStudentLoanPlanSettings(Guid userId) =>

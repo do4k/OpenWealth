@@ -15,6 +15,7 @@ public class TaxCalculatorTests
         decimal bonus = 0,
         decimal pensionPercent = 0,
         PensionMethod method = PensionMethod.SalarySacrifice,
+        int children = 0,
         params StudentLoanPlan[] loans)
     {
         var income = new IncomeDetails
@@ -23,6 +24,7 @@ public class TaxCalculatorTests
             AnnualBonus = bonus,
             EmployeePensionPercent = pensionPercent,
             PensionMethod = method,
+            ChildrenReceivingChildBenefit = children,
         };
         return TaxCalculator.Calculate(income, Tax, loans, Plans);
     }
@@ -138,6 +140,100 @@ public class TaxCalculatorTests
         Assert.Equal(without.NationalInsurance, with.NationalInsurance);
         // But take-home is lower because the contribution leaves net pay
         Assert.Equal(without.AnnualTakeHome - 5_000m, with.AnnualTakeHome);
+    }
+
+    [Fact]
+    public void AdjustedNetIncome_SalarySacrificeReducesDirectly()
+    {
+        var result = Calc(50_000m, pensionPercent: 10m, method: PensionMethod.SalarySacrifice);
+        Assert.Equal(45_000m, result.AdjustedNetIncome);
+    }
+
+    [Fact]
+    public void AdjustedNetIncome_ReliefAtSourceIsGrossedUp()
+    {
+        // £5,000 paid in is £6,250 gross with 20% basic-rate relief added
+        var result = Calc(50_000m, pensionPercent: 10m, method: PensionMethod.ReliefAtSource);
+        Assert.Equal(43_750m, result.AdjustedNetIncome);
+    }
+
+    [Fact]
+    public void PersonalAllowanceTaperUsesAdjustedNetIncome()
+    {
+        // £110,000 salary with an £8,000 relief-at-source contribution
+        // (£10,000 grossed up) brings adjusted net income back to £100,000,
+        // restoring the full personal allowance.
+        var result = Calc(110_000m, pensionPercent: 8m / 1.1m, method: PensionMethod.ReliefAtSource);
+        Assert.Equal(100_000m, result.AdjustedNetIncome);
+        Assert.Equal(12_570m, result.PersonalAllowance);
+    }
+
+    [Fact]
+    public void ChildcareLimitFlagsOnlyWhenOver()
+    {
+        var at = Calc(100_000m).FamilyBenefits;
+        Assert.False(at.LosesFreeChildcare);
+        Assert.Equal(0m, at.ChildcareHeadroom);
+
+        var over = Calc(100_001m).FamilyBenefits;
+        Assert.True(over.LosesFreeChildcare);
+        Assert.Equal(-1m, over.ChildcareHeadroom);
+
+        var under = Calc(90_000m).FamilyBenefits;
+        Assert.False(under.LosesFreeChildcare);
+        Assert.Equal(10_000m, under.ChildcareHeadroom);
+    }
+
+    [Fact]
+    public void SalarySacrificeCanKeepFreeChildcare()
+    {
+        // £105,000 gross with 5% sacrificed lands on £99,750 adjusted net income
+        var result = Calc(105_000m, pensionPercent: 5m, method: PensionMethod.SalarySacrifice);
+        Assert.False(result.FamilyBenefits.LosesFreeChildcare);
+    }
+
+    [Fact]
+    public void ChildBenefit_TwoChildrenAnnualAmount()
+    {
+        // (26.05 + 17.25) * 52 = 2,251.60
+        var fb = Calc(50_000m, children: 2).FamilyBenefits;
+        Assert.Equal(2_251.60m, fb.AnnualChildBenefit);
+        Assert.Equal(0m, fb.HicbcCharge);
+        Assert.Equal(2_251.60m, fb.NetChildBenefit);
+    }
+
+    [Fact]
+    public void Hicbc_HalfwayThroughBandClawsBackHalf()
+    {
+        // ANI £70,000 is £10,000 over the £60k threshold → 50 steps of £200 → 50%
+        var fb = Calc(70_000m, children: 2).FamilyBenefits;
+        Assert.Equal(50m, fb.HicbcPercent);
+        Assert.Equal(1_125.80m, fb.HicbcCharge);
+        Assert.Equal(1_125.80m, fb.NetChildBenefit);
+    }
+
+    [Fact]
+    public void Hicbc_FullyWithdrawnAtUpperThreshold()
+    {
+        var fb = Calc(80_000m, children: 1).FamilyBenefits;
+        Assert.Equal(100m, fb.HicbcPercent);
+        Assert.Equal(0m, fb.NetChildBenefit);
+    }
+
+    [Fact]
+    public void Hicbc_StepsRoundDown()
+    {
+        // £60,399 over by £399 → only 1 whole £200 step → 1%
+        var fb = Calc(60_399m, children: 1).FamilyBenefits;
+        Assert.Equal(1m, fb.HicbcPercent);
+    }
+
+    [Fact]
+    public void NoChildrenMeansNoChildBenefitOrCharge()
+    {
+        var fb = Calc(120_000m).FamilyBenefits;
+        Assert.Equal(0m, fb.AnnualChildBenefit);
+        Assert.Equal(0m, fb.HicbcCharge);
     }
 
     [Fact]

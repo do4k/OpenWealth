@@ -9,6 +9,7 @@ const empty: IncomeDetails = {
   employerPensionPercent: 0,
   pensionMethod: 'SalarySacrifice',
   pensionOnBonus: false,
+  childrenReceivingChildBenefit: 0,
 }
 
 export default function IncomePage() {
@@ -96,6 +97,14 @@ export default function IncomePage() {
               onChange={(e) => set({ pensionOnBonus: e.target.checked })}
             />
             <label htmlFor="bonus-pension">Pension applies to bonus too</label>
+          </div>
+          <div className="field">
+            <label>Children receiving child benefit</label>
+            <input
+              type="number" min="0" step="1" value={income.childrenReceivingChildBenefit}
+              onChange={(e) => set({ childrenReceivingChildBenefit: Number(e.target.value) })}
+            />
+            <span className="muted">Used for the high income child benefit charge.</span>
           </div>
           <button type="submit">Save income</button>
         </form>

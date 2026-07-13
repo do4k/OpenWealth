@@ -41,7 +41,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
+    DbInitializer.Initialize(scope.ServiceProvider.GetRequiredService<AppDbContext>());
 }
 
 app.UseCors();
