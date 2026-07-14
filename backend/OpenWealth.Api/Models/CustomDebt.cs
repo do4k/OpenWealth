@@ -16,6 +16,17 @@ public class CustomDebt
     public decimal? MonthlyPayment { get; set; }
 
     /// <summary>
+    /// An additional expected trend applied only in projections, on top of
+    /// whatever <see cref="AnnualInterestRatePercent"/> and
+    /// <see cref="MonthlyPayment"/> already do to the balance each month — for
+    /// modelling a debt you expect to keep growing beyond its stated rate
+    /// (e.g. a credit card you expect to keep spending on). Positive grows the
+    /// balance faster, negative slower; <see cref="Balance"/> itself is never
+    /// changed automatically.
+    /// </summary>
+    public decimal? ExpectedAnnualGrowthPercent { get; set; }
+
+    /// <summary>
     /// Once this debt is fully paid off, payday automation redirects
     /// <see cref="ReinvestMonthlyAmount"/> into this destination every month
     /// instead of the payment just disappearing. Starts the payday after the

@@ -7,6 +7,7 @@ public record CustomDebtRequest(
     decimal Balance,
     decimal? AnnualInterestRatePercent,
     decimal? MonthlyPayment,
+    decimal? ExpectedAnnualGrowthPercent = null,
     ReinvestDestinationType ReinvestDestinationType = ReinvestDestinationType.None,
     Guid? ReinvestDestinationId = null,
     decimal? ReinvestMonthlyAmount = null);

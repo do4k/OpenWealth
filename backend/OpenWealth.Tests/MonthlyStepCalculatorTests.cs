@@ -788,4 +788,90 @@ public class ProjectionServiceTests
         Assert.Equal(10_000m, user.CustomAssets[0].Value);
         Assert.Equal(500m, user.CustomDebts[0].Balance);
     }
+
+    [Fact]
+    public void PropertyGrowsInProjectionWhenConfigured()
+    {
+        var user = NewUser();
+        user.Properties.Add(new Property
+        {
+            Id = Guid.NewGuid(), Name = "Home", EstimatedValue = 300_000m,
+            ExpectedAnnualGrowthPercent = 3m,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        // 300,000 growing at 0.25%/month for 12 months
+        Assert.Equal(309_124.77m, points[^1].Property);
+    }
+
+    [Fact]
+    public void PropertyWithoutGrowthRateStaysFlatInProjection()
+    {
+        var user = NewUser();
+        user.Properties.Add(new Property
+        {
+            Id = Guid.NewGuid(), Name = "Home", EstimatedValue = 300_000m,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        Assert.Equal(300_000m, points[^1].Property);
+        // Real property is never touched, matching every other growth-rate item
+        Assert.Equal(300_000m, user.Properties[0].EstimatedValue);
+    }
+
+    [Fact]
+    public void CustomDebtGrowthOnlyAppliesWhenConfigured()
+    {
+        var user = NewUser();
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Growing card", Balance = 2_000m,
+            ExpectedAnnualGrowthPercent = 8m,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        // No interest rate or payment configured, so this is pure growth:
+        // 2,000 growing at ~0.667%/month for 12 months
+        Assert.Equal(2_165.98m, points[^1].OtherDebts);
+    }
+
+    [Fact]
+    public void CustomDebtExpectedGrowthLayersOnTopOfRealAccrualInProjection()
+    {
+        var user = NewUser();
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Card", Balance = 1_000m,
+            AnnualInterestRatePercent = 24m, MonthlyPayment = 50m,
+            ExpectedAnnualGrowthPercent = 12m,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 6);
+
+        // Real interest/payment alone would leave this at 810.76 after 6 months;
+        // the extra 12%/yr expected growth is layered on top every month, so the
+        // projected balance shrinks more slowly than the real accrual implies.
+        Assert.Equal(868.61m, points[^1].OtherDebts);
+        Assert.True(points[^1].OtherDebts > 810.76m);
+    }
+
+    [Fact]
+    public void PaidOffCustomDebtWithGrowthRateStaysAtZero()
+    {
+        var user = NewUser();
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Card", Balance = 100m, MonthlyPayment = 100m,
+            ExpectedAnnualGrowthPercent = 10m,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 3);
+
+        // Paid off in month 1; an expected-growth rate must never resurrect a
+        // cleared balance (0 * any growth factor is still 0).
+        Assert.All(points.Skip(1), pt => Assert.Equal(0m, pt.OtherDebts));
+    }
 }

@@ -14,6 +14,7 @@ function debtRequest(d: CustomDebt) {
     balance: d.balance,
     annualInterestRatePercent: d.annualInterestRatePercent,
     monthlyPayment: d.monthlyPayment,
+    expectedAnnualGrowthPercent: d.expectedAnnualGrowthPercent,
     reinvestDestinationType: d.reinvestDestinationType,
     reinvestDestinationId: d.reinvestDestinationId,
     reinvestMonthlyAmount: d.reinvestMonthlyAmount,
@@ -36,6 +37,7 @@ export default function OtherItemsPage() {
   const [debtBalance, setDebtBalance] = useState('')
   const [debtRate, setDebtRate] = useState('')
   const [debtPayment, setDebtPayment] = useState('')
+  const [debtGrowth, setDebtGrowth] = useState('')
   const [debtReinvestType, setDebtReinvestType] = useState<ReinvestDestinationType>('None')
   const [debtReinvestDestinationId, setDebtReinvestDestinationId] = useState('')
   const [debtReinvestAmount, setDebtReinvestAmount] = useState('')
@@ -97,11 +99,12 @@ export default function OtherItemsPage() {
         balance: Number(debtBalance),
         annualInterestRatePercent: debtRate ? Number(debtRate) : null,
         monthlyPayment: debtPayment ? Number(debtPayment) : null,
+        expectedAnnualGrowthPercent: debtGrowth ? Number(debtGrowth) : null,
         reinvestDestinationType: debtReinvestType,
         reinvestDestinationId: debtReinvestType === 'None' ? null : debtReinvestDestinationId || null,
         reinvestMonthlyAmount: debtReinvestType === 'None' || !debtReinvestAmount ? null : Number(debtReinvestAmount),
       })
-      setDebtName(''); setDebtBalance(''); setDebtRate(''); setDebtPayment('')
+      setDebtName(''); setDebtBalance(''); setDebtRate(''); setDebtPayment(''); setDebtGrowth('')
       setDebtReinvestType('None'); setDebtReinvestDestinationId(''); setDebtReinvestAmount('')
       load()
     } catch (err) {
@@ -228,6 +231,7 @@ export default function OtherItemsPage() {
                 <th className="num">Balance</th>
                 <th className="num">Interest rate</th>
                 <th className="num">Monthly payment</th>
+                <th className="num">Projected growth</th>
                 <th>Once paid off</th>
                 <th className="num"></th>
               </tr>
@@ -255,6 +259,13 @@ export default function OtherItemsPage() {
                       <input type="number" min="0" step="0.01" value={debtEdit.draft.monthlyPayment ?? ''}
                         onChange={(e) => debtEdit.updateDraft({
                           monthlyPayment: e.target.value ? Number(e.target.value) : null,
+                        })} />
+                    </td>
+                    <td className="num">
+                      <input type="number" min="-100" max="100" step="0.1"
+                        value={debtEdit.draft.expectedAnnualGrowthPercent ?? ''}
+                        onChange={(e) => debtEdit.updateDraft({
+                          expectedAnnualGrowthPercent: e.target.value ? Number(e.target.value) : null,
                         })} />
                     </td>
                     <td>
@@ -297,6 +308,9 @@ export default function OtherItemsPage() {
                     </td>
                     <td className="num">
                       {d.monthlyPayment != null ? gbp.format(d.monthlyPayment) : '—'}
+                    </td>
+                    <td className="num">
+                      {d.expectedAnnualGrowthPercent != null ? `${d.expectedAnnualGrowthPercent}%/yr` : '—'}
                     </td>
                     <td>
                       {d.reinvestDestinationType === 'None' ? (
@@ -346,6 +360,15 @@ export default function OtherItemsPage() {
             <input type="number" min="0" step="0.01" value={debtPayment}
               onChange={(e) => setDebtPayment(e.target.value)} />
             <span className="muted">Applied every payday alongside its interest.</span>
+          </div>
+          <div className="field">
+            <label>Projected growth (%/yr, optional)</label>
+            <input type="number" min="-100" max="100" step="0.1" value={debtGrowth}
+              onChange={(e) => setDebtGrowth(e.target.value)} />
+            <span className="muted">
+              For projections only, layered on top of the interest rate above — e.g. a card
+              you expect to keep spending on faster than you pay it down.
+            </span>
           </div>
           <ReinvestFields
             type={debtReinvestType}

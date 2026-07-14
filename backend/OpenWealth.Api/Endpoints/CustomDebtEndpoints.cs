@@ -60,6 +60,7 @@ public static class CustomDebtEndpoints
         d.Balance = req.Balance;
         d.AnnualInterestRatePercent = req.AnnualInterestRatePercent;
         d.MonthlyPayment = req.MonthlyPayment;
+        d.ExpectedAnnualGrowthPercent = req.ExpectedAnnualGrowthPercent;
         d.ReinvestDestinationType = req.ReinvestDestinationType;
         d.ReinvestDestinationId = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestDestinationId;
         d.ReinvestMonthlyAmount = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestMonthlyAmount;

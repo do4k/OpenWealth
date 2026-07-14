@@ -6,8 +6,10 @@ namespace OpenWealth.Api.Services;
 
 /// <summary>
 /// Simulates future paydays month by month using the same stepping rules the
-/// accrual service applies for real, plus optional expected growth on
-/// investments (projection-only — real investment balances are never touched).
+/// accrual service applies for real, plus each item's optional expected
+/// growth rate (investments, custom assets, properties, and — layered on top
+/// of any real interest/payment — custom debts). Growth is projection-only:
+/// the real recorded balances are never touched automatically.
 /// </summary>
 public static class ProjectionService
 {
@@ -33,6 +35,17 @@ public static class ProjectionService
             {
                 if (asset.ExpectedAnnualGrowthPercent is { } growth && growth != 0)
                     asset.Value = Math.Max(0m, (asset.Value * (1 + growth / 100m / 12m)).RoundToPence());
+            }
+            foreach (var property in sim.Properties)
+            {
+                if (property.ExpectedAnnualGrowthPercent is { } growth && growth != 0)
+                    property.EstimatedValue =
+                        Math.Max(0m, (property.EstimatedValue * (1 + growth / 100m / 12m)).RoundToPence());
+            }
+            foreach (var debt in sim.CustomDebts)
+            {
+                if (debt.ExpectedAnnualGrowthPercent is { } growth && growth != 0)
+                    debt.Balance = Math.Max(0m, (debt.Balance * (1 + growth / 100m / 12m)).RoundToPence());
             }
             points.Add(ToPoint(MonthlyStepCalculator.TakeSnapshot(sim, date)));
         }
@@ -91,6 +104,7 @@ public static class ProjectionService
         Properties = user.Properties.Select(p => new Property
         {
             Id = p.Id, Name = p.Name, EstimatedValue = p.EstimatedValue,
+            ExpectedAnnualGrowthPercent = p.ExpectedAnnualGrowthPercent,
         }).ToList(),
         CustomAssets = user.CustomAssets.Select(a => new CustomAsset
         {
@@ -101,6 +115,7 @@ public static class ProjectionService
         {
             Id = d.Id, Name = d.Name, Balance = d.Balance,
             AnnualInterestRatePercent = d.AnnualInterestRatePercent, MonthlyPayment = d.MonthlyPayment,
+            ExpectedAnnualGrowthPercent = d.ExpectedAnnualGrowthPercent,
             ReinvestDestinationType = d.ReinvestDestinationType, ReinvestDestinationId = d.ReinvestDestinationId,
             ReinvestMonthlyAmount = d.ReinvestMonthlyAmount,
         }).ToList(),

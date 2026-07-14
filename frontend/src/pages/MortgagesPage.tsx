@@ -33,7 +33,11 @@ const emptyMortgage: MortgageForm = {
 }
 
 function propertyRequest(p: Property) {
-  return { name: p.name, estimatedValue: p.estimatedValue }
+  return {
+    name: p.name,
+    estimatedValue: p.estimatedValue,
+    expectedAnnualGrowthPercent: p.expectedAnnualGrowthPercent,
+  }
 }
 
 function mortgageRequest(m: Mortgage) {
@@ -59,6 +63,7 @@ export default function MortgagesPage() {
   const [investments, setInvestments] = useState<Investment[]>([])
   const [propName, setPropName] = useState('')
   const [propValue, setPropValue] = useState('')
+  const [propGrowth, setPropGrowth] = useState('')
   const [form, setForm] = useState<MortgageForm>(emptyMortgage)
   const [error, setError] = useState<string | null>(null)
   const propertyEdit = useInlineEdit<Property>()
@@ -82,9 +87,14 @@ export default function MortgagesPage() {
     e.preventDefault()
     setError(null)
     try {
-      await api.post('/api/properties', { name: propName, estimatedValue: Number(propValue) })
+      await api.post('/api/properties', {
+        name: propName,
+        estimatedValue: Number(propValue),
+        expectedAnnualGrowthPercent: propGrowth ? Number(propGrowth) : null,
+      })
       setPropName('')
       setPropValue('')
+      setPropGrowth('')
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add property.')
@@ -177,6 +187,7 @@ export default function MortgagesPage() {
               <tr>
                 <th>Name</th>
                 <th className="num">Estimated value</th>
+                <th className="num">Projected growth</th>
                 <th className="num">Equity</th>
                 <th className="num"></th>
               </tr>
@@ -193,6 +204,13 @@ export default function MortgagesPage() {
                       <input type="number" min="0" step="1000" value={propertyEdit.draft.estimatedValue}
                         onChange={(e) => propertyEdit.updateDraft({ estimatedValue: Number(e.target.value) })} />
                     </td>
+                    <td className="num">
+                      <input type="number" min="-100" max="100" step="0.1"
+                        value={propertyEdit.draft.expectedAnnualGrowthPercent ?? ''}
+                        onChange={(e) => propertyEdit.updateDraft({
+                          expectedAnnualGrowthPercent: e.target.value ? Number(e.target.value) : null,
+                        })} />
+                    </td>
                     <td className="num">{gbp.format(equity(propertyEdit.draft))}</td>
                     <td className="num">
                       <div className="row-actions">
@@ -205,6 +223,9 @@ export default function MortgagesPage() {
                   <tr key={p.id}>
                     <td>{p.name}</td>
                     <td className="num">{gbp.format(p.estimatedValue)}</td>
+                    <td className="num">
+                      {p.expectedAnnualGrowthPercent != null ? `${p.expectedAnnualGrowthPercent}%/yr` : '—'}
+                    </td>
                     <td className="num">{gbp.format(equity(p))}</td>
                     <td className="num">
                       <div className="row-actions">
@@ -227,6 +248,12 @@ export default function MortgagesPage() {
             <label>Estimated value (£)</label>
             <input type="number" min="0" step="1000" value={propValue}
               onChange={(e) => setPropValue(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label>Projected growth (%/yr, optional)</label>
+            <input type="number" min="-100" max="100" step="0.1" value={propGrowth}
+              onChange={(e) => setPropGrowth(e.target.value)} />
+            <span className="muted">House-price growth assumed for projections only.</span>
           </div>
           <button type="submit">Add property</button>
         </form>
