@@ -72,7 +72,7 @@ read-only and passphrase-protected.
 
 ## Stack
 
-- **Backend**: ASP.NET Core 8 (minimal APIs), EF Core + SQLite, JWT auth
+- **Backend**: ASP.NET Core 10 (minimal APIs), EF Core + SQLite, JWT auth
 - **Frontend**: React 19 + TypeScript, Vite, React Router
 - **Tests**: xUnit covering the tax/NI/student-loan/mortgage calculators
 
@@ -153,6 +153,10 @@ two-line config) rather than exposing port 8080 directly.
 
 ## Running for development
 
+Prerequisites: the [.NET SDK](https://dotnet.microsoft.com/download) version pinned in
+[`global.json`](global.json) (currently 10.0.301 — `dotnet --version` should report a
+match once installed) and Node 22+.
+
 Backend (http://localhost:5179):
 
 ```bash
@@ -174,12 +178,26 @@ Run the calculation-engine tests:
 dotnet test
 ```
 
+### Database migrations
+
+Schema changes go through EF Core migrations rather than hand-written SQL. Install the
+`dotnet-ef` tool once (`dotnet tool install --global dotnet-ef`), then from
+`backend/OpenWealth.Api`:
+
+```bash
+dotnet ef migrations add <Name>
+```
+
+Migrations apply automatically on startup (`Database.Migrate()`), including a one-time
+baseline for databases created before migrations existed.
+
 ## Configuration
 
 | Setting | Env var | Notes |
 | --- | --- | --- |
 | JWT signing key | `JWT__KEY` | Required in production; 32+ chars. A dev key ships in `appsettings.Development.json` only. |
 | Database | `ConnectionStrings__Default` | Defaults to `Data Source=openwealth.db` (Docker: `/data/openwealth.db`). |
+| Timezone | `TZ` | Container timezone, e.g. for correctly timestamped payday runs. Defaults to `Europe/London`. |
 
 ## Accuracy notes
 
