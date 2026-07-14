@@ -4,7 +4,6 @@ using OpenWealth.Api.Contracts.Requests;
 using OpenWealth.Api.Data;
 using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
-using OpenWealth.Api.Services;
 
 namespace OpenWealth.Api.Endpoints;
 
@@ -18,7 +17,7 @@ public static class MortgageEndpoints
         {
             var mortgages = await db.Mortgages.AsNoTracking()
                 .Where(m => m.UserId == p.UserId()).ToListAsync();
-            return Results.Ok(mortgages.Select(ToResponse));
+            return Results.Ok(mortgages.Select(m => m.ToResponse()));
         });
 
         group.MapPost("/", async (MortgageRequest req, ClaimsPrincipal p, AppDbContext db) =>
@@ -33,7 +32,7 @@ public static class MortgageEndpoints
             Apply(mortgage, req);
             db.Mortgages.Add(mortgage);
             await db.SaveChangesAsync();
-            return Results.Created($"/api/mortgages/{mortgage.Id}", ToResponse(mortgage));
+            return Results.Created($"/api/mortgages/{mortgage.Id}", mortgage.ToResponse());
         });
 
         group.MapPut("/{id:guid}", async (Guid id, MortgageRequest req, ClaimsPrincipal p, AppDbContext db) =>
@@ -47,7 +46,7 @@ public static class MortgageEndpoints
             if (error is not null) return error;
             Apply(mortgage, req);
             await db.SaveChangesAsync();
-            return Results.Ok(ToResponse(mortgage));
+            return Results.Ok(mortgage.ToResponse());
         });
 
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal p, AppDbContext db) =>
@@ -79,23 +78,4 @@ public static class MortgageEndpoints
         m.ReinvestDestinationId = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestDestinationId;
         m.ReinvestMonthlyAmount = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestMonthlyAmount;
     }
-
-    private static object ToResponse(Mortgage m) => new
-    {
-        m.Id,
-        m.Name,
-        m.PropertyId,
-        m.OutstandingBalance,
-        m.AnnualInterestRatePercent,
-        m.RateType,
-        m.FixedRateEndDate,
-        m.FollowOnRatePercent,
-        m.TermMonthsRemaining,
-        m.ReinvestDestinationType,
-        m.ReinvestDestinationId,
-        m.ReinvestMonthlyAmount,
-        MonthlyPayment = MortgageCalculator.MonthlyPayment(m),
-        IsFixedPeriodOver = MortgageCalculator.IsFixedPeriodOver(m, DateOnly.FromDateTime(DateTime.UtcNow)),
-        IsPaidOff = m.OutstandingBalance <= 0,
-    };
 }

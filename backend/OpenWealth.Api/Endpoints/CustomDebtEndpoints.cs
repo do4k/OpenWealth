@@ -16,7 +16,7 @@ public static class CustomDebtEndpoints
         group.MapGet("/", async (ClaimsPrincipal p, AppDbContext db) =>
         {
             var debts = await db.CustomDebts.AsNoTracking().Where(d => d.UserId == p.UserId()).ToListAsync();
-            return Results.Ok(debts.Select(ToResponse));
+            return Results.Ok(debts.Select(d => d.ToResponse()));
         });
 
         group.MapPost("/", async (CustomDebtRequest req, ClaimsPrincipal p, AppDbContext db) =>
@@ -30,7 +30,7 @@ public static class CustomDebtEndpoints
             Apply(debt, req);
             db.CustomDebts.Add(debt);
             await db.SaveChangesAsync();
-            return Results.Created($"/api/custom-debts/{debt.Id}", ToResponse(debt));
+            return Results.Created($"/api/custom-debts/{debt.Id}", debt.ToResponse());
         });
 
         group.MapPut("/{id:guid}", async (Guid id, CustomDebtRequest req, ClaimsPrincipal p, AppDbContext db) =>
@@ -43,7 +43,7 @@ public static class CustomDebtEndpoints
             if (error is not null) return error;
             Apply(debt, req);
             await db.SaveChangesAsync();
-            return Results.Ok(ToResponse(debt));
+            return Results.Ok(debt.ToResponse());
         });
 
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal p, AppDbContext db) =>
@@ -64,17 +64,4 @@ public static class CustomDebtEndpoints
         d.ReinvestDestinationId = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestDestinationId;
         d.ReinvestMonthlyAmount = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestMonthlyAmount;
     }
-
-    private static object ToResponse(CustomDebt d) => new
-    {
-        d.Id,
-        d.Name,
-        d.Balance,
-        d.AnnualInterestRatePercent,
-        d.MonthlyPayment,
-        d.ReinvestDestinationType,
-        d.ReinvestDestinationId,
-        d.ReinvestMonthlyAmount,
-        IsPaidOff = d.Balance <= 0,
-    };
 }
