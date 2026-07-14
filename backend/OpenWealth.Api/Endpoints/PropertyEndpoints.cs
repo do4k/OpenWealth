@@ -24,6 +24,7 @@ public static class PropertyEndpoints
                 UserId = p.UserId(),
                 Name = req.Name,
                 EstimatedValue = req.EstimatedValue,
+                ExpectedAnnualGrowthPercent = req.ExpectedAnnualGrowthPercent,
             };
             db.Properties.Add(property);
             await db.SaveChangesAsync();
@@ -36,6 +37,7 @@ public static class PropertyEndpoints
             if (property is null) return Results.NotFound();
             property.Name = req.Name;
             property.EstimatedValue = req.EstimatedValue;
+            property.ExpectedAnnualGrowthPercent = req.ExpectedAnnualGrowthPercent;
             await db.SaveChangesAsync();
             return Results.Ok(property);
         });

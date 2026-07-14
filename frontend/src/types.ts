@@ -34,6 +34,7 @@ export interface Property {
   id: string
   name: string
   estimatedValue: number
+  expectedAnnualGrowthPercent: number | null
 }
 
 export interface Mortgage {
@@ -85,6 +86,7 @@ export interface CustomDebt {
   balance: number
   annualInterestRatePercent: number | null
   monthlyPayment: number | null
+  expectedAnnualGrowthPercent: number | null
   reinvestDestinationType: ReinvestDestinationType
   reinvestDestinationId: string | null
   reinvestMonthlyAmount: number | null

@@ -24,7 +24,9 @@ read-only and passphrase-protected.
   and fixed/variable rate type. Fixed deals record when the fix ends and an optional
   follow-on rate, and the UI flags mortgages that are about to roll (or have rolled)
   onto a variable rate. Monthly repayments are computed by standard amortisation, and
-  linked properties show your equity.
+  linked properties show your equity. A property can carry a projected growth rate
+  (house-price appreciation) that only affects projections — its recorded estimated value
+  is never changed automatically.
 - **Reinvest what you were paying off** — a mortgage or other debt can be told where to
   send its old monthly payment once it's fully paid off: a savings account or an
   investment, and how much. Payday automation redirects that amount there every month
@@ -42,7 +44,10 @@ read-only and passphrase-protected.
   business stake as an asset; a credit card, car finance or personal loan as a debt.
   Debts can carry an interest rate and monthly payment, which payday automation accrues
   and pays down just like a mortgage; assets can carry a projected growth rate (negative
-  for depreciating things like cars) that only affects projections.
+  for depreciating things like cars) that only affects projections. A debt can *also*
+  carry its own projected growth rate, layered on top of whatever its real interest rate
+  and payment already do each month in projections — for a debt you expect to keep
+  growing beyond its stated rate (e.g. a credit card you expect to keep spending on).
 - **Edit everything in place** — every item (loans, properties, mortgages, savings,
   investments, other assets and debts) can be edited directly in its row, so correcting
   a balance never means deleting and re-adding it.

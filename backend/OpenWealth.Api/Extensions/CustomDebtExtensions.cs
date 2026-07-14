@@ -12,6 +12,7 @@ public static class CustomDebtExtensions
         d.Balance,
         d.AnnualInterestRatePercent,
         d.MonthlyPayment,
+        d.ExpectedAnnualGrowthPercent,
         d.ReinvestDestinationType,
         d.ReinvestDestinationId,
         d.ReinvestMonthlyAmount,
