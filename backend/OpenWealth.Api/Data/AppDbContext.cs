@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AccrualEvent> AccrualEvents => Set<AccrualEvent>();
     public DbSet<CustomAsset> CustomAssets => Set<CustomAsset>();
     public DbSet<CustomDebt> CustomDebts => Set<CustomDebt>();
+    public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +52,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         });
 
         modelBuilder.Entity<AccrualEvent>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.Date });
+            e.HasOne<User>().WithMany().HasForeignKey(s => s.UserId);
+        });
+
+        modelBuilder.Entity<LedgerEntry>(e =>
         {
             e.HasIndex(s => new { s.UserId, s.Date });
             e.HasOne<User>().WithMany().HasForeignKey(s => s.UserId);

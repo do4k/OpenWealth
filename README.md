@@ -56,6 +56,10 @@ read-only and passphrase-protected.
 - **Trends** — a chart of your recorded net worth history alongside a projection that
   runs the same payday rules forward (plus optional expected growth on investments):
   savings compounding upward, mortgages and student loans amortising down to zero.
+- **Ledger** — record one-off cash injections and payouts (a bonus, an inheritance, money
+  pulled out for a big purchase) against a savings account, investment or custom asset.
+  Applied immediately to the account's balance, and kept as an auditable list of
+  transactions; removing one reverses its effect on the balance.
 - **Sharing** — enable a public profile at a random URL, protected by a passphrase you
   choose. Pick what viewers see: net worth only, category totals, or the full breakdown.
   Rotate the link at any time to cut off old viewers.

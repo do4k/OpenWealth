@@ -2,6 +2,7 @@ export type StudentLoanPlan = 'Plan1' | 'Plan2' | 'Plan4' | 'Plan5' | 'Postgradu
 export type PensionMethod = 'SalarySacrifice' | 'NetPay' | 'ReliefAtSource'
 export type MortgageRateType = 'Fixed' | 'Variable'
 export type ReinvestDestinationType = 'None' | 'Savings' | 'Investment'
+export type LedgerAccountType = 'Savings' | 'Investment' | 'CustomAsset'
 export type SavingsAccountType =
   | 'CurrentAccount' | 'EasyAccess' | 'FixedTerm' | 'CashIsa' | 'PremiumBonds' | 'Other'
 export type InvestmentType =
@@ -209,6 +210,15 @@ export interface AccrualEvent {
 export interface HistoryResponse {
   snapshots: WealthPoint[]
   events: AccrualEvent[]
+}
+
+export interface LedgerEntry {
+  id: string
+  date: string
+  description: string
+  amount: number
+  accountType: LedgerAccountType
+  accountId: string
 }
 
 export interface PublicProfile {
