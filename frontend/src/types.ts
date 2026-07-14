@@ -9,6 +9,7 @@ export type SavingsAccountType =
 export type InvestmentType =
   | 'StocksAndSharesIsa' | 'GeneralInvestmentAccount' | 'PensionPot' | 'LifetimeIsa' | 'Crypto' | 'Other'
 export type ShareVisibility = 'NetWorthOnly' | 'CategoryTotals' | 'FullBreakdown'
+export type HouseholdMemberStatus = 'Invited' | 'Active'
 
 export interface AuthResponse {
   token: string
@@ -260,4 +261,37 @@ export interface PublicProfile {
   items?: NetWorthItem[]
   history: PublicTrendPoint[]
   projection: PublicTrendPoint[]
+}
+
+export interface HouseholdMember {
+  membershipId: string
+  userId: string
+  displayName: string
+  email: string
+  status: HouseholdMemberStatus
+  visibility: ShareVisibility
+  isMe: boolean
+}
+
+export interface HouseholdInfo {
+  inHousehold: boolean
+  myStatus?: HouseholdMemberStatus
+  myVisibility?: ShareVisibility
+  members?: HouseholdMember[]
+}
+
+export interface HouseholdSummaryMember {
+  displayName: string
+  visibility: ShareVisibility
+  netWorth: number
+  totalAssets?: number
+  totalLiabilities?: number
+  assetTotals?: CategoryTotal[]
+  liabilityTotals?: CategoryTotal[]
+  items?: NetWorthItem[]
+}
+
+export interface HouseholdSummary {
+  totalNetWorth: number
+  members: HouseholdSummaryMember[]
 }

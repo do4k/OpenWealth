@@ -76,6 +76,12 @@ read-only and passphrase-protected.
   Trends page (history and projection), scaled down to just the series that tier allows —
   a single net worth line, or assets/liabilities, or the full category breakdown.
   Rotate the link at any time to cut off old viewers.
+- **Household** — link up with people you trust to see a combined net worth. Invites only
+  work for people who already have an OpenWealth account — there's no way to create a
+  profile on someone else's behalf. Joining a household never changes who owns or edits
+  what: each member keeps sole control of their own data and independently picks what they
+  disclose to the rest of the household (net worth only, category totals, or the full
+  breakdown), separate from their public Sharing settings.
 - **Editable tax config** — all rates and thresholds (tax bands, NI, loan plans) are
   stored per user and seeded with 2025/26 figures, so you can update them each tax year
   without waiting for a code change.

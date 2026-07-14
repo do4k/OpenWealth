@@ -10,6 +10,7 @@ import InvestmentsPage from './pages/InvestmentsPage'
 import OtherItemsPage from './pages/OtherItemsPage'
 import LedgerPage from './pages/LedgerPage'
 import GoalsPage from './pages/GoalsPage'
+import HouseholdPage from './pages/HouseholdPage'
 import SharingPage from './pages/SharingPage'
 import TaxSettingsPage from './pages/TaxSettingsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
@@ -42,6 +43,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <NavLink to="/other">Other assets &amp; debts</NavLink>
           <NavLink to="/ledger">Ledger</NavLink>
           <div className="nav-section">Account</div>
+          <NavLink to="/household">Household</NavLink>
           <NavLink to="/sharing">Sharing</NavLink>
           <NavLink to="/tax-settings">Tax settings</NavLink>
         </nav>
@@ -80,6 +82,7 @@ export default function App() {
           <Route path="/investments" element={<Protected page={<InvestmentsPage />} />} />
           <Route path="/other" element={<Protected page={<OtherItemsPage />} />} />
           <Route path="/ledger" element={<Protected page={<LedgerPage />} />} />
+          <Route path="/household" element={<Protected page={<HouseholdPage />} />} />
           <Route path="/sharing" element={<Protected page={<SharingPage />} />} />
           <Route path="/tax-settings" element={<Protected page={<TaxSettingsPage />} />} />
           <Route path="*" element={<Navigate to="/" replace />} />

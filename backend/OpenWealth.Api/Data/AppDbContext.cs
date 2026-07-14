@@ -21,6 +21,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CustomDebt> CustomDebts => Set<CustomDebt>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
     public DbSet<Goal> Goals => Set<Goal>();
+    public DbSet<Household> Households => Set<Household>();
+    public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,5 +75,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Property>()
             .HasMany(p => p.Mortgages).WithOne().HasForeignKey(m => m.PropertyId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<HouseholdMember>(e =>
+        {
+            // At most one membership row (pending or accepted) per user, ever.
+            e.HasIndex(m => m.UserId).IsUnique();
+            e.HasOne<Household>().WithMany().HasForeignKey(m => m.HouseholdId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(m => m.InvitedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }
