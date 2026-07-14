@@ -16,8 +16,10 @@ public class NetWorthSnapshot
     public decimal Property { get; set; }
     public decimal Savings { get; set; }
     public decimal Investments { get; set; }
+    public decimal OtherAssets { get; set; }
     public decimal Mortgages { get; set; }
     public decimal StudentLoans { get; set; }
+    public decimal OtherDebts { get; set; }
 }
 
 /// <summary>

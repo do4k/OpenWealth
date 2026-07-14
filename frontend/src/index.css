@@ -214,6 +214,18 @@ td.num, th.num {
   font-variant-numeric: tabular-nums;
 }
 
+/* Inline row editing */
+tr.editing-row {
+  background: var(--accent-soft);
+}
+
+tr.editing-row td input,
+tr.editing-row td select {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+  min-width: 90px;
+}
+
 /* Forms */
 form.grid {
   display: grid;

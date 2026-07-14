@@ -65,6 +65,21 @@ export interface Investment {
   expectedAnnualGrowthPercent: number | null
 }
 
+export interface CustomAsset {
+  id: string
+  name: string
+  value: number
+  expectedAnnualGrowthPercent: number | null
+}
+
+export interface CustomDebt {
+  id: string
+  name: string
+  balance: number
+  annualInterestRatePercent: number | null
+  monthlyPayment: number | null
+}
+
 export interface IncomeDetails {
   annualSalary: number
   annualBonus: number
@@ -165,8 +180,10 @@ export interface WealthPoint {
   property: number
   savings: number
   investments: number
+  otherAssets: number
   mortgages: number
   studentLoans: number
+  otherDebts: number
 }
 
 export interface AccrualEvent {

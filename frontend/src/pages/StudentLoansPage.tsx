@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, gbp } from '../api'
+import { useInlineEdit } from '../hooks/useInlineEdit'
 import type { StudentLoan, StudentLoanPlan, StudentLoanPlanSetting } from '../types'
 
 const PLANS: StudentLoanPlan[] = ['Plan1', 'Plan2', 'Plan4', 'Plan5', 'Postgraduate']
@@ -13,6 +14,7 @@ export default function StudentLoansPage() {
   const [balance, setBalance] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [settingsSaved, setSettingsSaved] = useState(false)
+  const edit = useInlineEdit<StudentLoan>()
 
   const load = () => {
     api.get<StudentLoan[]>('/api/student-loans').then(setLoans).catch((e) => setError(e.message))
@@ -30,6 +32,22 @@ export default function StudentLoansPage() {
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add loan.')
+    }
+  }
+
+  async function saveLoanEdit() {
+    if (!edit.draft) return
+    setError(null)
+    try {
+      await api.put(`/api/student-loans/${edit.editingId}`, {
+        plan: edit.draft.plan,
+        balance: edit.draft.balance,
+        notes: edit.draft.notes,
+      })
+      edit.cancelEdit()
+      load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save changes.')
     }
   }
 
@@ -79,18 +97,43 @@ export default function StudentLoansPage() {
               </tr>
             </thead>
             <tbody>
-              {loans.map((loan) => (
-                <tr key={loan.id}>
-                  <td>{planLabel(loan.plan)}</td>
-                  <td className="num">{gbp.format(loan.balance)}</td>
-                  <td className="num">{settingFor(loan.plan)?.interestRatePercent ?? '—'}%</td>
-                  <td className="num">
-                    <div className="row-actions">
-                      <button className="danger" onClick={() => removeLoan(loan.id)}>Remove</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {loans.map((loan) =>
+                edit.isEditing(loan.id) && edit.draft ? (
+                  <tr key={loan.id} className="editing-row">
+                    <td>
+                      <select value={edit.draft.plan}
+                        onChange={(e) => edit.updateDraft({ plan: e.target.value as StudentLoanPlan })}>
+                        {PLANS.map((p) => (
+                          <option key={p} value={p}>{planLabel(p)}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="num">
+                      <input type="number" min="0" step="0.01" value={edit.draft.balance}
+                        onChange={(e) => edit.updateDraft({ balance: Number(e.target.value) })} />
+                    </td>
+                    <td className="num">{settingFor(edit.draft.plan)?.interestRatePercent ?? '—'}%</td>
+                    <td className="num">
+                      <div className="row-actions">
+                        <button onClick={saveLoanEdit}>Save</button>
+                        <button className="secondary" onClick={edit.cancelEdit}>Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={loan.id}>
+                    <td>{planLabel(loan.plan)}</td>
+                    <td className="num">{gbp.format(loan.balance)}</td>
+                    <td className="num">{settingFor(loan.plan)?.interestRatePercent ?? '—'}%</td>
+                    <td className="num">
+                      <div className="row-actions">
+                        <button className="secondary" onClick={() => edit.startEdit(loan)}>Edit</button>
+                        <button className="danger" onClick={() => removeLoan(loan.id)}>Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         )}

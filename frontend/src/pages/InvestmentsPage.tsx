@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, gbp } from '../api'
+import { useInlineEdit } from '../hooks/useInlineEdit'
 import type { Investment, InvestmentType } from '../types'
 
 const TYPES: { value: InvestmentType; label: string }[] = [
@@ -13,6 +14,15 @@ const TYPES: { value: InvestmentType; label: string }[] = [
 
 const typeLabel = (t: InvestmentType) => TYPES.find((x) => x.value === t)?.label ?? t
 
+function toRequest(i: Investment) {
+  return {
+    name: i.name,
+    type: i.type,
+    currentValue: i.currentValue,
+    expectedAnnualGrowthPercent: i.expectedAnnualGrowthPercent,
+  }
+}
+
 export default function InvestmentsPage() {
   const [investments, setInvestments] = useState<Investment[]>([])
   const [name, setName] = useState('')
@@ -20,6 +30,7 @@ export default function InvestmentsPage() {
   const [value, setValue] = useState('')
   const [growth, setGrowth] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const edit = useInlineEdit<Investment>()
 
   const load = () => {
     api.get<Investment[]>('/api/investments').then(setInvestments).catch((e) => setError(e.message))
@@ -40,6 +51,18 @@ export default function InvestmentsPage() {
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add investment.')
+    }
+  }
+
+  async function saveEdit() {
+    if (!edit.draft) return
+    setError(null)
+    try {
+      await api.put(`/api/investments/${edit.editingId}`, toRequest(edit.draft))
+      edit.cancelEdit()
+      load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save changes.')
     }
   }
 
@@ -69,21 +92,56 @@ export default function InvestmentsPage() {
               </tr>
             </thead>
             <tbody>
-              {investments.map((i) => (
-                <tr key={i.id}>
-                  <td>{i.name}</td>
-                  <td>{typeLabel(i.type)}</td>
-                  <td className="num">{gbp.format(i.currentValue)}</td>
-                  <td className="num">
-                    {i.expectedAnnualGrowthPercent != null ? `${i.expectedAnnualGrowthPercent}%/yr` : '—'}
-                  </td>
-                  <td className="num">
-                    <div className="row-actions">
-                      <button className="danger" onClick={() => remove(i.id)}>Remove</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {investments.map((i) =>
+                edit.isEditing(i.id) && edit.draft ? (
+                  <tr key={i.id} className="editing-row">
+                    <td>
+                      <input value={edit.draft.name}
+                        onChange={(e) => edit.updateDraft({ name: e.target.value })} />
+                    </td>
+                    <td>
+                      <select value={edit.draft.type}
+                        onChange={(e) => edit.updateDraft({ type: e.target.value as InvestmentType })}>
+                        {TYPES.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="num">
+                      <input type="number" min="0" step="0.01" value={edit.draft.currentValue}
+                        onChange={(e) => edit.updateDraft({ currentValue: Number(e.target.value) })} />
+                    </td>
+                    <td className="num">
+                      <input type="number" min="-50" max="50" step="0.1"
+                        value={edit.draft.expectedAnnualGrowthPercent ?? ''}
+                        onChange={(e) => edit.updateDraft({
+                          expectedAnnualGrowthPercent: e.target.value ? Number(e.target.value) : null,
+                        })} />
+                    </td>
+                    <td className="num">
+                      <div className="row-actions">
+                        <button onClick={saveEdit}>Save</button>
+                        <button className="secondary" onClick={edit.cancelEdit}>Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={i.id}>
+                    <td>{i.name}</td>
+                    <td>{typeLabel(i.type)}</td>
+                    <td className="num">{gbp.format(i.currentValue)}</td>
+                    <td className="num">
+                      {i.expectedAnnualGrowthPercent != null ? `${i.expectedAnnualGrowthPercent}%/yr` : '—'}
+                    </td>
+                    <td className="num">
+                      <div className="row-actions">
+                        <button className="secondary" onClick={() => edit.startEdit(i)}>Edit</button>
+                        <button className="danger" onClick={() => remove(i.id)}>Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         )}

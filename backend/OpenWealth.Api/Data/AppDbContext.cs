@@ -17,6 +17,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ShareSettings> ShareSettings => Set<ShareSettings>();
     public DbSet<NetWorthSnapshot> NetWorthSnapshots => Set<NetWorthSnapshot>();
     public DbSet<AccrualEvent> AccrualEvents => Set<AccrualEvent>();
+    public DbSet<CustomAsset> CustomAssets => Set<CustomAsset>();
+    public DbSet<CustomDebt> CustomDebts => Set<CustomDebt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,6 +34,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasMany(u => u.Mortgages).WithOne().HasForeignKey(m => m.UserId);
             e.HasMany(u => u.SavingsAccounts).WithOne().HasForeignKey(s => s.UserId);
             e.HasMany(u => u.Investments).WithOne().HasForeignKey(i => i.UserId);
+            e.HasMany(u => u.CustomAssets).WithOne().HasForeignKey(a => a.UserId);
+            e.HasMany(u => u.CustomDebts).WithOne().HasForeignKey(d => d.UserId);
         });
 
         modelBuilder.Entity<StudentLoanPlanSetting>()

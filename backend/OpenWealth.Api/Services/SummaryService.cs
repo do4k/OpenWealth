@@ -18,14 +18,18 @@ public class SummaryService(AppDbContext db)
             .Include(u => u.Mortgages)
             .Include(u => u.SavingsAccounts)
             .Include(u => u.Investments)
+            .Include(u => u.CustomAssets)
+            .Include(u => u.CustomDebts)
             .SingleAsync(u => u.Id == userId, ct);
 
         var items = new List<NetWorthItem>();
         items.AddRange(user.Properties.Select(p => new NetWorthItem("Property", p.Name, p.EstimatedValue)));
         items.AddRange(user.SavingsAccounts.Select(s => new NetWorthItem("Savings", s.Name, s.Balance)));
         items.AddRange(user.Investments.Select(i => new NetWorthItem("Investments", i.Name, i.CurrentValue)));
+        items.AddRange(user.CustomAssets.Select(a => new NetWorthItem("Other assets", a.Name, a.Value)));
         items.AddRange(user.Mortgages.Select(m => new NetWorthItem("Mortgages", m.Name, -m.OutstandingBalance)));
         items.AddRange(user.StudentLoans.Select(l => new NetWorthItem("Student loans", l.Plan.ToString(), -l.Balance)));
+        items.AddRange(user.CustomDebts.Select(d => new NetWorthItem("Other debts", d.Name, -d.Balance)));
 
         var assetTotals = SumByCategory(items.Where(i => i.Value >= 0));
         var liabilityTotals = SumByCategory(items.Where(i => i.Value < 0));

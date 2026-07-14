@@ -8,5 +8,7 @@ public record ProjectionPoint(
     decimal Property,
     decimal Savings,
     decimal Investments,
+    decimal OtherAssets,
     decimal Mortgages,
-    decimal StudentLoans);
+    decimal StudentLoans,
+    decimal OtherDebts);
