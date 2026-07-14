@@ -1,6 +1,8 @@
 export type StudentLoanPlan = 'Plan1' | 'Plan2' | 'Plan4' | 'Plan5' | 'Postgraduate'
 export type PensionMethod = 'SalarySacrifice' | 'NetPay' | 'ReliefAtSource'
 export type MortgageRateType = 'Fixed' | 'Variable'
+export type ReinvestDestinationType = 'None' | 'Savings' | 'Investment'
+export type LedgerAccountType = 'Savings' | 'Investment' | 'CustomAsset'
 export type SavingsAccountType =
   | 'CurrentAccount' | 'EasyAccess' | 'FixedTerm' | 'CashIsa' | 'PremiumBonds' | 'Other'
 export type InvestmentType =
@@ -46,6 +48,10 @@ export interface Mortgage {
   termMonthsRemaining: number
   monthlyPayment: number
   isFixedPeriodOver: boolean
+  reinvestDestinationType: ReinvestDestinationType
+  reinvestDestinationId: string | null
+  reinvestMonthlyAmount: number | null
+  isPaidOff: boolean
 }
 
 export interface SavingsAccount {
@@ -79,6 +85,10 @@ export interface CustomDebt {
   balance: number
   annualInterestRatePercent: number | null
   monthlyPayment: number | null
+  reinvestDestinationType: ReinvestDestinationType
+  reinvestDestinationId: string | null
+  reinvestMonthlyAmount: number | null
+  isPaidOff: boolean
 }
 
 export interface IncomeDetails {
@@ -200,6 +210,15 @@ export interface AccrualEvent {
 export interface HistoryResponse {
   snapshots: WealthPoint[]
   events: AccrualEvent[]
+}
+
+export interface LedgerEntry {
+  id: string
+  date: string
+  description: string
+  amount: number
+  accountType: LedgerAccountType
+  accountId: string
 }
 
 export interface PublicProfile {

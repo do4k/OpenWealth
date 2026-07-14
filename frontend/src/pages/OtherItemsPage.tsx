@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { api, gbp } from '../api'
+import { api, gbp, gbpExact } from '../api'
+import { ReinvestFields } from '../components/ReinvestFields'
 import { useInlineEdit } from '../hooks/useInlineEdit'
-import type { CustomAsset, CustomDebt } from '../types'
+import type { CustomAsset, CustomDebt, Investment, ReinvestDestinationType, SavingsAccount } from '../types'
 
 function assetRequest(a: CustomAsset) {
   return { name: a.name, value: a.value, expectedAnnualGrowthPercent: a.expectedAnnualGrowthPercent }
@@ -13,12 +14,17 @@ function debtRequest(d: CustomDebt) {
     balance: d.balance,
     annualInterestRatePercent: d.annualInterestRatePercent,
     monthlyPayment: d.monthlyPayment,
+    reinvestDestinationType: d.reinvestDestinationType,
+    reinvestDestinationId: d.reinvestDestinationId,
+    reinvestMonthlyAmount: d.reinvestMonthlyAmount,
   }
 }
 
 export default function OtherItemsPage() {
   const [assets, setAssets] = useState<CustomAsset[]>([])
   const [debts, setDebts] = useState<CustomDebt[]>([])
+  const [savingsAccounts, setSavingsAccounts] = useState<SavingsAccount[]>([])
+  const [investments, setInvestments] = useState<Investment[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const [assetName, setAssetName] = useState('')
@@ -30,13 +36,24 @@ export default function OtherItemsPage() {
   const [debtBalance, setDebtBalance] = useState('')
   const [debtRate, setDebtRate] = useState('')
   const [debtPayment, setDebtPayment] = useState('')
+  const [debtReinvestType, setDebtReinvestType] = useState<ReinvestDestinationType>('None')
+  const [debtReinvestDestinationId, setDebtReinvestDestinationId] = useState('')
+  const [debtReinvestAmount, setDebtReinvestAmount] = useState('')
   const debtEdit = useInlineEdit<CustomDebt>()
 
   const load = () => {
     api.get<CustomAsset[]>('/api/custom-assets').then(setAssets).catch((e) => setError(e.message))
     api.get<CustomDebt[]>('/api/custom-debts').then(setDebts).catch((e) => setError(e.message))
+    api.get<SavingsAccount[]>('/api/savings').then(setSavingsAccounts).catch((e) => setError(e.message))
+    api.get<Investment[]>('/api/investments').then(setInvestments).catch((e) => setError(e.message))
   }
   useEffect(load, [])
+
+  const destinationName = (type: ReinvestDestinationType, id: string | null) => {
+    if (type === 'Savings') return savingsAccounts.find((s) => s.id === id)?.name ?? 'unknown account'
+    if (type === 'Investment') return investments.find((i) => i.id === id)?.name ?? 'unknown investment'
+    return null
+  }
 
   async function addAsset(e: React.FormEvent) {
     e.preventDefault()
@@ -80,8 +97,12 @@ export default function OtherItemsPage() {
         balance: Number(debtBalance),
         annualInterestRatePercent: debtRate ? Number(debtRate) : null,
         monthlyPayment: debtPayment ? Number(debtPayment) : null,
+        reinvestDestinationType: debtReinvestType,
+        reinvestDestinationId: debtReinvestType === 'None' ? null : debtReinvestDestinationId || null,
+        reinvestMonthlyAmount: debtReinvestType === 'None' || !debtReinvestAmount ? null : Number(debtReinvestAmount),
       })
       setDebtName(''); setDebtBalance(''); setDebtRate(''); setDebtPayment('')
+      setDebtReinvestType('None'); setDebtReinvestDestinationId(''); setDebtReinvestAmount('')
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add debt.')
@@ -207,6 +228,7 @@ export default function OtherItemsPage() {
                 <th className="num">Balance</th>
                 <th className="num">Interest rate</th>
                 <th className="num">Monthly payment</th>
+                <th>Once paid off</th>
                 <th className="num"></th>
               </tr>
             </thead>
@@ -235,6 +257,30 @@ export default function OtherItemsPage() {
                           monthlyPayment: e.target.value ? Number(e.target.value) : null,
                         })} />
                     </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 160 }}>
+                        <ReinvestFields
+                          compact
+                          type={debtEdit.draft.reinvestDestinationType}
+                          destinationId={debtEdit.draft.reinvestDestinationId ?? ''}
+                          amount={debtEdit.draft.reinvestMonthlyAmount?.toString() ?? ''}
+                          onTypeChange={(t) => debtEdit.updateDraft({
+                            reinvestDestinationType: t,
+                            reinvestDestinationId: t === 'None' ? null : debtEdit.draft!.reinvestDestinationId,
+                            reinvestMonthlyAmount: t === 'None'
+                              ? null
+                              : debtEdit.draft!.reinvestMonthlyAmount ?? d.monthlyPayment ?? null,
+                          })}
+                          onDestinationChange={(id) => debtEdit.updateDraft({ reinvestDestinationId: id || null })}
+                          onAmountChange={(v) => debtEdit.updateDraft({
+                            reinvestMonthlyAmount: v ? Number(v) : null,
+                          })}
+                          savingsAccounts={savingsAccounts}
+                          investments={investments}
+                          suggestedAmount={d.monthlyPayment ?? undefined}
+                        />
+                      </div>
+                    </td>
                     <td className="num">
                       <div className="row-actions">
                         <button onClick={saveDebt}>Save</button>
@@ -251,6 +297,21 @@ export default function OtherItemsPage() {
                     </td>
                     <td className="num">
                       {d.monthlyPayment != null ? gbp.format(d.monthlyPayment) : '—'}
+                    </td>
+                    <td>
+                      {d.reinvestDestinationType === 'None' ? (
+                        <span className="muted">—</span>
+                      ) : (
+                        <>
+                          <span className={`badge ${d.isPaidOff ? '' : 'warn'}`}>
+                            {d.isPaidOff ? 'Reinvesting' : 'Will reinvest'}
+                          </span>
+                          <div className="muted">
+                            {gbpExact.format(d.reinvestMonthlyAmount ?? 0)}/mo →{' '}
+                            {destinationName(d.reinvestDestinationType, d.reinvestDestinationId)}
+                          </div>
+                        </>
+                      )}
                     </td>
                     <td className="num">
                       <div className="row-actions">
@@ -286,6 +347,16 @@ export default function OtherItemsPage() {
               onChange={(e) => setDebtPayment(e.target.value)} />
             <span className="muted">Applied every payday alongside its interest.</span>
           </div>
+          <ReinvestFields
+            type={debtReinvestType}
+            destinationId={debtReinvestDestinationId}
+            amount={debtReinvestAmount}
+            onTypeChange={(t) => { setDebtReinvestType(t); setDebtReinvestDestinationId('') }}
+            onDestinationChange={setDebtReinvestDestinationId}
+            onAmountChange={setDebtReinvestAmount}
+            savingsAccounts={savingsAccounts}
+            investments={investments}
+          />
           <button type="submit">Add debt</button>
         </form>
       </div>

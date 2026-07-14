@@ -85,6 +85,8 @@ public static class ProjectionService
             AnnualInterestRatePercent = m.AnnualInterestRatePercent, RateType = m.RateType,
             FixedRateEndDate = m.FixedRateEndDate, FollowOnRatePercent = m.FollowOnRatePercent,
             TermMonthsRemaining = m.TermMonthsRemaining,
+            ReinvestDestinationType = m.ReinvestDestinationType, ReinvestDestinationId = m.ReinvestDestinationId,
+            ReinvestMonthlyAmount = m.ReinvestMonthlyAmount,
         }).ToList(),
         Properties = user.Properties.Select(p => new Property
         {
@@ -99,6 +101,8 @@ public static class ProjectionService
         {
             Id = d.Id, Name = d.Name, Balance = d.Balance,
             AnnualInterestRatePercent = d.AnnualInterestRatePercent, MonthlyPayment = d.MonthlyPayment,
+            ReinvestDestinationType = d.ReinvestDestinationType, ReinvestDestinationId = d.ReinvestDestinationId,
+            ReinvestMonthlyAmount = d.ReinvestMonthlyAmount,
         }).ToList(),
     };
 }

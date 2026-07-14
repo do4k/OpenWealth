@@ -14,34 +14,36 @@ public static class CustomDebtEndpoints
         var group = app.MapGroup("/api/custom-debts").RequireAuthorization();
 
         group.MapGet("/", async (ClaimsPrincipal p, AppDbContext db) =>
-            await db.CustomDebts.AsNoTracking().Where(d => d.UserId == p.UserId()).ToListAsync());
+        {
+            var debts = await db.CustomDebts.AsNoTracking().Where(d => d.UserId == p.UserId()).ToListAsync();
+            return Results.Ok(debts.Select(d => d.ToResponse()));
+        });
 
         group.MapPost("/", async (CustomDebtRequest req, ClaimsPrincipal p, AppDbContext db) =>
         {
-            var debt = new CustomDebt
-            {
-                Id = Guid.NewGuid(),
-                UserId = p.UserId(),
-                Name = req.Name,
-                Balance = req.Balance,
-                AnnualInterestRatePercent = req.AnnualInterestRatePercent,
-                MonthlyPayment = req.MonthlyPayment,
-            };
+            var userId = p.UserId();
+            var error = await ReinvestDestinationValidation.Validate(
+                db, userId, req.ReinvestDestinationType, req.ReinvestDestinationId, req.ReinvestMonthlyAmount);
+            if (error is not null) return error;
+
+            var debt = new CustomDebt { Id = Guid.NewGuid(), UserId = userId, Name = req.Name };
+            Apply(debt, req);
             db.CustomDebts.Add(debt);
             await db.SaveChangesAsync();
-            return Results.Created($"/api/custom-debts/{debt.Id}", debt);
+            return Results.Created($"/api/custom-debts/{debt.Id}", debt.ToResponse());
         });
 
         group.MapPut("/{id:guid}", async (Guid id, CustomDebtRequest req, ClaimsPrincipal p, AppDbContext db) =>
         {
-            var debt = await db.CustomDebts.SingleOrDefaultAsync(d => d.Id == id && d.UserId == p.UserId());
+            var userId = p.UserId();
+            var debt = await db.CustomDebts.SingleOrDefaultAsync(d => d.Id == id && d.UserId == userId);
             if (debt is null) return Results.NotFound();
-            debt.Name = req.Name;
-            debt.Balance = req.Balance;
-            debt.AnnualInterestRatePercent = req.AnnualInterestRatePercent;
-            debt.MonthlyPayment = req.MonthlyPayment;
+            var error = await ReinvestDestinationValidation.Validate(
+                db, userId, req.ReinvestDestinationType, req.ReinvestDestinationId, req.ReinvestMonthlyAmount);
+            if (error is not null) return error;
+            Apply(debt, req);
             await db.SaveChangesAsync();
-            return Results.Ok(debt);
+            return Results.Ok(debt.ToResponse());
         });
 
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal p, AppDbContext db) =>
@@ -50,5 +52,16 @@ public static class CustomDebtEndpoints
                 .Where(d => d.Id == id && d.UserId == p.UserId()).ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
+    }
+
+    private static void Apply(CustomDebt d, CustomDebtRequest req)
+    {
+        d.Name = req.Name;
+        d.Balance = req.Balance;
+        d.AnnualInterestRatePercent = req.AnnualInterestRatePercent;
+        d.MonthlyPayment = req.MonthlyPayment;
+        d.ReinvestDestinationType = req.ReinvestDestinationType;
+        d.ReinvestDestinationId = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestDestinationId;
+        d.ReinvestMonthlyAmount = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestMonthlyAmount;
     }
 }

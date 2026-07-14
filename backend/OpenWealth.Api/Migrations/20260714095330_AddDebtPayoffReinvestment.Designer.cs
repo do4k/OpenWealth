@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OpenWealth.Api.Data;
 
@@ -10,9 +11,11 @@ using OpenWealth.Api.Data;
 namespace OpenWealth.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260714095330_AddDebtPayoffReinvestment")]
+    partial class AddDebtPayoffReinvestment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.28");
@@ -197,38 +200,6 @@ namespace OpenWealth.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Investments");
-                });
-
-            modelBuilder.Entity("OpenWealth.Api.Models.LedgerEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("AccountId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("AccountType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "Date");
-
-                    b.ToTable("LedgerEntries");
                 });
 
             modelBuilder.Entity("OpenWealth.Api.Models.Mortgage", b =>
@@ -612,15 +583,6 @@ namespace OpenWealth.Api.Migrations
                 {
                     b.HasOne("OpenWealth.Api.Models.User", null)
                         .WithMany("Investments")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("OpenWealth.Api.Models.LedgerEntry", b =>
-                {
-                    b.HasOne("OpenWealth.Api.Models.User", null)
-                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

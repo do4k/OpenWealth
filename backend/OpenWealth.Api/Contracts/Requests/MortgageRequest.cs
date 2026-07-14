@@ -10,4 +10,7 @@ public record MortgageRequest(
     MortgageRateType RateType,
     DateOnly? FixedRateEndDate,
     decimal? FollowOnRatePercent,
-    int TermMonthsRemaining);
+    int TermMonthsRemaining,
+    ReinvestDestinationType ReinvestDestinationType = ReinvestDestinationType.None,
+    Guid? ReinvestDestinationId = null,
+    decimal? ReinvestMonthlyAmount = null);
