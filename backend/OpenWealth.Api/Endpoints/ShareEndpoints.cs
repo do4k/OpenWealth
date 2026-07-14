@@ -87,7 +87,7 @@ public static class ShareEndpoints
             if (settings is null || settings.PassphraseHash is null)
                 return Results.NotFound();
 
-            var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == settings.UserId);
+            var user = await db.Users.AsNoTracking().WithWealthData().SingleAsync(u => u.Id == settings.UserId);
             if (hasher.VerifyHashedPassword(user, settings.PassphraseHash, req.Passphrase)
                 == PasswordVerificationResult.Failed)
             {
@@ -95,6 +95,13 @@ public static class ShareEndpoints
             }
 
             var summary = await summaries.BuildAsync(settings.UserId);
+
+            var snapshots = await db.NetWorthSnapshots.AsNoTracking()
+                .Where(s => s.UserId == settings.UserId).OrderBy(s => s.Date).ToListAsync();
+            var history = snapshots.Select(s => s.ToTrendPoint().ToShareView(settings.Visibility));
+            var projection = ProjectionService.Project(user, DateOnly.FromDateTime(DateTime.UtcNow), 300)
+                .Select(pt => pt.ToTrendPoint().ToShareView(settings.Visibility));
+
             object view = settings.Visibility switch
             {
                 ShareVisibility.NetWorthOnly => new
@@ -102,6 +109,8 @@ public static class ShareEndpoints
                     user.DisplayName,
                     settings.Visibility,
                     summary.NetWorth,
+                    History = history,
+                    Projection = projection,
                 },
                 ShareVisibility.CategoryTotals => new
                 {
@@ -112,6 +121,8 @@ public static class ShareEndpoints
                     summary.TotalLiabilities,
                     summary.AssetTotals,
                     summary.LiabilityTotals,
+                    History = history,
+                    Projection = projection,
                 },
                 _ => new
                 {
@@ -123,6 +134,8 @@ public static class ShareEndpoints
                     summary.AssetTotals,
                     summary.LiabilityTotals,
                     summary.Items,
+                    History = history,
+                    Projection = projection,
                 },
             };
             return Results.Ok(view);

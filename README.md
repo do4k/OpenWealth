@@ -62,6 +62,9 @@ read-only and passphrase-protected.
   transactions; removing one reverses its effect on the balance.
 - **Sharing** — enable a public profile at a random URL, protected by a passphrase you
   choose. Pick what viewers see: net worth only, category totals, or the full breakdown.
+  Whichever tier you pick, viewers also get the same net worth trend graph as your own
+  Trends page (history and projection), scaled down to just the series that tier allows —
+  a single net worth line, or assets/liabilities, or the full category breakdown.
   Rotate the link at any time to cut off old viewers.
 - **Editable tax config** — all rates and thresholds (tax bands, NI, loan plans) are
   stored per user and seeded with 2025/26 figures, so you can update them each tax year

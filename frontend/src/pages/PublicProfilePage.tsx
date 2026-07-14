@@ -1,7 +1,24 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, gbp } from '../api'
+import { TrendChart, TREND_HORIZONS, WEALTH_SERIES } from '../components/TrendChart'
 import type { PublicProfile } from '../types'
+
+const CATEGORY_TREND_SERIES = [
+  { key: 'netWorth', label: 'Net worth', color: '#3987e5' },
+  { key: 'totalAssets', label: 'Assets', color: '#199e70' },
+  { key: 'totalLiabilities', label: 'Liabilities', color: '#e66767' },
+] as const
+
+const NET_WORTH_TREND_SERIES = [
+  { key: 'netWorth', label: 'Net worth', color: '#3987e5' },
+] as const
+
+function seriesForVisibility(visibility: PublicProfile['visibility']) {
+  if (visibility === 'FullBreakdown') return WEALTH_SERIES
+  if (visibility === 'CategoryTotals') return CATEGORY_TREND_SERIES
+  return NET_WORTH_TREND_SERIES
+}
 
 export default function PublicProfilePage() {
   const { slug } = useParams<{ slug: string }>()
@@ -9,6 +26,7 @@ export default function PublicProfilePage() {
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [months, setMonths] = useState(60)
 
   async function unlock(e: React.FormEvent) {
     e.preventDefault()
@@ -79,6 +97,39 @@ export default function PublicProfilePage() {
           </div>
         )}
       </div>
+
+      {profile.history.length + profile.projection.length > 1 && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2 style={{ margin: 0 }}>Net worth over time</h2>
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              {TREND_HORIZONS.map((h) => (
+                <button
+                  key={h.months}
+                  type="button"
+                  className="secondary"
+                  style={months === h.months
+                    ? { borderColor: 'var(--accent)', color: 'var(--accent)' }
+                    : undefined}
+                  onClick={() => setMonths(h.months)}
+                >
+                  {h.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <TrendChart
+            historic={profile.history}
+            projected={profile.projection.slice(0, months + 1)}
+            series={seriesForVisibility(profile.visibility)}
+            emptyMessage="Not enough recorded history yet."
+          />
+          <p className="muted" style={{ margin: 0 }}>
+            Solid lines are recorded history; dashed lines are projected from current balances,
+            rates and repayments.
+          </p>
+        </div>
+      )}
 
       {(profile.assetTotals || profile.liabilityTotals) && !profile.items && (
         <div className="card">

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Data;
+using OpenWealth.Api.Extensions;
 
 namespace OpenWealth.Api.Services;
 
@@ -8,18 +9,7 @@ public class SummaryService(AppDbContext db)
 {
     public async Task<WealthSummary> BuildAsync(Guid userId, CancellationToken ct = default)
     {
-        var user = await db.Users
-            .AsNoTracking()
-            .Include(u => u.Income)
-            .Include(u => u.TaxSettings)
-            .Include(u => u.StudentLoanPlanSettings)
-            .Include(u => u.StudentLoans)
-            .Include(u => u.Properties)
-            .Include(u => u.Mortgages)
-            .Include(u => u.SavingsAccounts)
-            .Include(u => u.Investments)
-            .Include(u => u.CustomAssets)
-            .Include(u => u.CustomDebts)
+        var user = await db.Users.AsNoTracking().WithWealthData()
             .SingleAsync(u => u.Id == userId, ct);
 
         var items = new List<NetWorthItem>();

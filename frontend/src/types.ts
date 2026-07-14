@@ -221,6 +221,20 @@ export interface LedgerEntry {
   accountId: string
 }
 
+export interface PublicTrendPoint {
+  date: string
+  netWorth: number
+  totalAssets?: number
+  totalLiabilities?: number
+  property?: number
+  savings?: number
+  investments?: number
+  otherAssets?: number
+  mortgages?: number
+  studentLoans?: number
+  otherDebts?: number
+}
+
 export interface PublicProfile {
   displayName: string
   visibility: ShareVisibility
@@ -230,4 +244,6 @@ export interface PublicProfile {
   assetTotals?: CategoryTotal[]
   liabilityTotals?: CategoryTotal[]
   items?: NetWorthItem[]
+  history: PublicTrendPoint[]
+  projection: PublicTrendPoint[]
 }
