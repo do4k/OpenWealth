@@ -33,11 +33,19 @@ const compact = new Intl.NumberFormat('en-GB', {
 const monthYear = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 
+export interface TrendMarker {
+  date: string
+  label: string
+  onTrack: boolean
+}
+
 interface ChartProps<T extends { date: string }> {
   historic: T[]
   projected: T[]
   series: readonly TrendSeriesConfig<T>[]
   emptyMessage?: string
+  /** Vertical lines (e.g. goal target dates) drawn over the chart, if within its date range. */
+  markers?: TrendMarker[]
 }
 
 export function TrendChart<T extends { date: string }>({
@@ -45,6 +53,7 @@ export function TrendChart<T extends { date: string }>({
   projected,
   series,
   emptyMessage = 'Not enough data yet.',
+  markers = [],
 }: ChartProps<T>) {
   const [hover, setHover] = useState<{ x: number; point: T; projectedPt: boolean } | null>(null)
 
@@ -56,7 +65,7 @@ export function TrendChart<T extends { date: string }>({
 
   const value = (p: T, key: keyof T & string): number => Number(p[key])
 
-  const { all, xOf, yOf, ticksY, ticksX } = useMemo(() => {
+  const { all, xOf, yOf, ticksY, ticksX, tMin, tMax } = useMemo(() => {
     const all = [
       ...historic.map((p) => ({ ...p, projectedPt: false as const })),
       ...projected.map((p) => ({ ...p, projectedPt: true as const })),
@@ -84,13 +93,28 @@ export function TrendChart<T extends { date: string }>({
     const ticksX: number[] = Array.from({ length: tickCount }, (_, i) =>
       tMin + ((tMax - tMin) * i) / (tickCount - 1))
 
-    return { all, xOf, yOf, ticksY, ticksX }
+    return { all, xOf, yOf, ticksY, ticksX, tMin, tMax }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historic, projected, series])
 
   if (all.length < 2) {
     return <p className="muted" style={{ padding: '2rem 0' }}>{emptyMessage}</p>
   }
+
+  // Markers whose dates land close together get stacked onto separate rows
+  // so their labels don't overlap into an illegible mess.
+  const labelSpacingPx = 70
+  const visibleMarkers = markers
+    .map((m) => ({ ...m, t: Date.parse(m.date) }))
+    .filter((m) => m.t >= tMin && m.t <= tMax)
+    .sort((a, b) => a.t - b.t)
+    .reduce<{ date: string; label: string; onTrack: boolean; t: number; x: number; row: number }[]>((acc, m) => {
+      const x = xOf(m.date)
+      let row = 0
+      while (acc.some((placed) => placed.row === row && Math.abs(placed.x - x) < labelSpacingPx)) row++
+      acc.push({ ...m, x, row })
+      return acc
+    }, [])
 
   const path = (points: T[], key: keyof T & string) =>
     points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(p.date).toFixed(1)},${yOf(value(p, key)).toFixed(1)}`).join(' ')
@@ -166,6 +190,25 @@ export function TrendChart<T extends { date: string }>({
             )}
           </g>
         ))}
+
+        {/* goal markers */}
+        {visibleMarkers.map((m, i) => {
+          const color = m.onTrack ? 'var(--positive)' : 'var(--warning)'
+          return (
+            <g key={i}>
+              <line
+                x1={m.x} x2={m.x} y1={M.top} y2={H - M.bottom}
+                stroke={color} strokeWidth="1.5" strokeDasharray="3 4" opacity="0.85"
+              />
+              <text
+                x={m.x} y={M.top + 12 + m.row * 13} textAnchor="middle" fontSize="11" fontWeight="600"
+                fill={color}
+              >
+                {m.label}
+              </text>
+            </g>
+          )
+        })}
 
         {/* hover crosshair */}
         {hover && (

@@ -61,6 +61,11 @@ read-only and passphrase-protected.
 - **Trends** — a chart of your recorded net worth history alongside a projection that
   runs the same payday rules forward (plus optional expected growth on investments):
   savings compounding upward, mortgages and student loans amortising down to zero.
+- **Goals** — set a target for net worth, savings, investments, total assets or total
+  debts by a date, and see whether your current balances, rates and repayments actually
+  get you there — computed from the exact same projection that drives Trends, never
+  stored or estimated separately. Net worth goals also show up as marked target dates on
+  the Trends chart itself, green if on track and amber if not.
 - **Ledger** — record one-off cash injections and payouts (a bonus, an inheritance, money
   pulled out for a big purchase) against a savings account, investment or custom asset.
   Applied immediately to the account's balance, and kept as an auditable list of

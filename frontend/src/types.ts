@@ -3,6 +3,7 @@ export type PensionMethod = 'SalarySacrifice' | 'NetPay' | 'ReliefAtSource'
 export type MortgageRateType = 'Fixed' | 'Variable'
 export type ReinvestDestinationType = 'None' | 'Savings' | 'Investment'
 export type LedgerAccountType = 'Savings' | 'Investment' | 'CustomAsset'
+export type GoalMetric = 'NetWorth' | 'Savings' | 'Investments' | 'TotalAssets' | 'TotalLiabilities'
 export type SavingsAccountType =
   | 'CurrentAccount' | 'EasyAccess' | 'FixedTerm' | 'CashIsa' | 'PremiumBonds' | 'Other'
 export type InvestmentType =
@@ -221,6 +222,17 @@ export interface LedgerEntry {
   amount: number
   accountType: LedgerAccountType
   accountId: string
+}
+
+export interface Goal {
+  id: string
+  name: string
+  metric: GoalMetric
+  targetAmount: number
+  targetDate: string
+  currentValue: number
+  projectedValue: number
+  onTrack: boolean
 }
 
 export interface PublicTrendPoint {
