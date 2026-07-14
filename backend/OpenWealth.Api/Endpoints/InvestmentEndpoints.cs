@@ -18,14 +18,20 @@ public static class InvestmentEndpoints
 
         group.MapPost("/", async (InvestmentRequest req, ClaimsPrincipal p, AppDbContext db) =>
         {
+            var userId = p.UserId();
+            var receivesContributions = ReceivesContributions(req);
+            if (receivesContributions)
+                await ClearOtherPensionContributionFlags(db, userId, exceptId: null);
+
             var investment = new Investment
             {
                 Id = Guid.NewGuid(),
-                UserId = p.UserId(),
+                UserId = userId,
                 Name = req.Name,
                 Type = req.Type,
                 CurrentValue = req.CurrentValue,
                 ExpectedAnnualGrowthPercent = req.ExpectedAnnualGrowthPercent,
+                ReceivesIncomePensionContributions = receivesContributions,
             };
             db.Investments.Add(investment);
             await db.SaveChangesAsync();
@@ -34,12 +40,19 @@ public static class InvestmentEndpoints
 
         group.MapPut("/{id:guid}", async (Guid id, InvestmentRequest req, ClaimsPrincipal p, AppDbContext db) =>
         {
-            var investment = await db.Investments.SingleOrDefaultAsync(i => i.Id == id && i.UserId == p.UserId());
+            var userId = p.UserId();
+            var investment = await db.Investments.SingleOrDefaultAsync(i => i.Id == id && i.UserId == userId);
             if (investment is null) return Results.NotFound();
+
+            var receivesContributions = ReceivesContributions(req);
+            if (receivesContributions)
+                await ClearOtherPensionContributionFlags(db, userId, exceptId: id);
+
             investment.Name = req.Name;
             investment.Type = req.Type;
             investment.CurrentValue = req.CurrentValue;
             investment.ExpectedAnnualGrowthPercent = req.ExpectedAnnualGrowthPercent;
+            investment.ReceivesIncomePensionContributions = receivesContributions;
             await db.SaveChangesAsync();
             return Results.Ok(investment);
         });
@@ -50,5 +63,20 @@ public static class InvestmentEndpoints
                 .Where(i => i.Id == id && i.UserId == p.UserId()).ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
+    }
+
+    // Only a pension pot can be linked, regardless of what the client sends.
+    private static bool ReceivesContributions(InvestmentRequest req) =>
+        req.Type == InvestmentType.PensionPot && req.ReceivesIncomePensionContributions;
+
+    // At most one investment per user receives the income-page pension
+    // contributions — enabling it on one clears it from any other.
+    private static async Task ClearOtherPensionContributionFlags(AppDbContext db, Guid userId, Guid? exceptId)
+    {
+        var others = await db.Investments
+            .Where(i => i.UserId == userId && i.ReceivesIncomePensionContributions && i.Id != exceptId)
+            .ToListAsync();
+        foreach (var other in others)
+            other.ReceivesIncomePensionContributions = false;
     }
 }

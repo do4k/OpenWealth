@@ -301,6 +301,83 @@ public class MonthlyStepCalculatorTests
     }
 
     [Fact]
+    public void LinkedPensionPotReceivesEmployeeAndEmployerContribution()
+    {
+        var user = NewUser();
+        user.Income = new IncomeDetails
+        {
+            AnnualSalary = 60_000m, EmployeePensionPercent = 5m, EmployerPensionPercent = 3m,
+        };
+        user.Investments.Add(new Investment
+        {
+            Id = Guid.NewGuid(), Name = "Workplace pension", Type = InvestmentType.PensionPot,
+            CurrentValue = 10_000m, ReceivesIncomePensionContributions = true,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        // (60,000 * 5% + 60,000 * 3%) / 12 = (3,000 + 1,800) / 12 = 400
+        var e = Assert.Single(events);
+        Assert.Equal("Investments", e.Category);
+        Assert.Equal(400m, e.DepositAmount);
+        Assert.Equal(0m, e.InterestAmount);
+        Assert.Equal(10_400m, user.Investments[0].CurrentValue);
+    }
+
+    [Fact]
+    public void UnlinkedPensionPotIsUntouchedByIncomeContribution()
+    {
+        var user = NewUser();
+        user.Income = new IncomeDetails { AnnualSalary = 60_000m, EmployeePensionPercent = 5m };
+        user.Investments.Add(new Investment
+        {
+            Id = Guid.NewGuid(), Name = "Workplace pension", Type = InvestmentType.PensionPot,
+            CurrentValue = 10_000m, ReceivesIncomePensionContributions = false,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        Assert.Empty(events);
+        Assert.Equal(10_000m, user.Investments[0].CurrentValue);
+    }
+
+    [Fact]
+    public void NonPensionPotInvestmentIgnoresContributionFlagEvenIfSet()
+    {
+        // Defensive: the endpoint only allows the flag on PensionPot investments,
+        // but the calculator should not apply a contribution even if that
+        // invariant were ever bypassed.
+        var user = NewUser();
+        user.Income = new IncomeDetails { AnnualSalary = 60_000m, EmployeePensionPercent = 5m };
+        user.Investments.Add(new Investment
+        {
+            Id = Guid.NewGuid(), Name = "ISA", Type = InvestmentType.StocksAndSharesIsa,
+            CurrentValue = 10_000m, ReceivesIncomePensionContributions = true,
+        });
+
+        MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        Assert.Equal(10_000m, user.Investments[0].CurrentValue);
+    }
+
+    [Fact]
+    public void PensionContributionIsZeroWithoutIncome()
+    {
+        var user = NewUser();
+        user.Investments.Add(new Investment
+        {
+            Id = Guid.NewGuid(), Name = "Workplace pension", Type = InvestmentType.PensionPot,
+            CurrentValue = 10_000m, ReceivesIncomePensionContributions = true,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        Assert.Empty(events);
+        Assert.Equal(10_000m, user.Investments[0].CurrentValue);
+        Assert.Equal(0m, MonthlyStepCalculator.MonthlyPensionContribution(user));
+    }
+
+    [Fact]
     public void CatchUpAppliesEachMissedPayday()
     {
         var user = NewUser();
@@ -462,6 +539,29 @@ public class ProjectionServiceTests
         // Future value of £100/month deposited after 1%/month interest:
         // 100 * ((1.01^12 - 1) / 0.01) = 1,268.25
         Assert.Equal(1_268.25m, points[^1].Savings);
+    }
+
+    [Fact]
+    public void LinkedPensionPotAccumulatesContributionsInProjection()
+    {
+        var user = NewUser();
+        user.Income = new IncomeDetails
+        {
+            AnnualSalary = 60_000m, EmployeePensionPercent = 5m, EmployerPensionPercent = 3m,
+        };
+        user.Investments.Add(new Investment
+        {
+            Id = Guid.NewGuid(), Name = "Workplace pension", Type = InvestmentType.PensionPot,
+            CurrentValue = 10_000m, ReceivesIncomePensionContributions = true,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        // No growth rate configured, so it's pure accumulation: 10,000 + 400 * 12 = 14,800
+        Assert.Equal(14_800m, points[^1].Investments);
+
+        // Real investment is untouched
+        Assert.Equal(10_000m, user.Investments[0].CurrentValue);
     }
 
     [Fact]
