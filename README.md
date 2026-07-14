@@ -25,6 +25,12 @@ read-only and passphrase-protected.
   follow-on rate, and the UI flags mortgages that are about to roll (or have rolled)
   onto a variable rate. Monthly repayments are computed by standard amortisation, and
   linked properties show your equity.
+- **Reinvest what you were paying off** — a mortgage or other debt can be told where to
+  send its old monthly payment once it's fully paid off: a savings account or an
+  investment, and how much. Payday automation redirects that amount there every month
+  from then on (never in the same payday the debt actually clears), so the money you
+  were spending on debt keeps building wealth instead of disappearing — both in recorded
+  history and in projections.
 - **Savings & investments** — cash accounts, ISAs, Premium Bonds, pension pots, GIAs
   and more, summed into your net worth. Savings accounts can carry a monthly standing
   order that payday automation deposits for you, compounding with interest in both the

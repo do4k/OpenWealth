@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api, gbp, gbpExact } from '../api'
+import { ReinvestFields } from '../components/ReinvestFields'
 import { useInlineEdit } from '../hooks/useInlineEdit'
-import type { Mortgage, MortgageRateType, Property } from '../types'
+import type { Investment, Mortgage, MortgageRateType, Property, ReinvestDestinationType, SavingsAccount } from '../types'
 
 interface MortgageForm {
   name: string
@@ -12,6 +13,9 @@ interface MortgageForm {
   fixedRateEndDate: string
   followOnRatePercent: string
   termMonthsRemaining: string
+  reinvestDestinationType: ReinvestDestinationType
+  reinvestDestinationId: string
+  reinvestMonthlyAmount: string
 }
 
 const emptyMortgage: MortgageForm = {
@@ -23,6 +27,9 @@ const emptyMortgage: MortgageForm = {
   fixedRateEndDate: '',
   followOnRatePercent: '',
   termMonthsRemaining: '',
+  reinvestDestinationType: 'None',
+  reinvestDestinationId: '',
+  reinvestMonthlyAmount: '',
 }
 
 function propertyRequest(p: Property) {
@@ -39,12 +46,17 @@ function mortgageRequest(m: Mortgage) {
     fixedRateEndDate: m.fixedRateEndDate,
     followOnRatePercent: m.followOnRatePercent,
     termMonthsRemaining: m.termMonthsRemaining,
+    reinvestDestinationType: m.reinvestDestinationType,
+    reinvestDestinationId: m.reinvestDestinationId,
+    reinvestMonthlyAmount: m.reinvestMonthlyAmount,
   }
 }
 
 export default function MortgagesPage() {
   const [properties, setProperties] = useState<Property[]>([])
   const [mortgages, setMortgages] = useState<Mortgage[]>([])
+  const [savingsAccounts, setSavingsAccounts] = useState<SavingsAccount[]>([])
+  const [investments, setInvestments] = useState<Investment[]>([])
   const [propName, setPropName] = useState('')
   const [propValue, setPropValue] = useState('')
   const [form, setForm] = useState<MortgageForm>(emptyMortgage)
@@ -55,8 +67,16 @@ export default function MortgagesPage() {
   const load = () => {
     api.get<Property[]>('/api/properties').then(setProperties).catch((e) => setError(e.message))
     api.get<Mortgage[]>('/api/mortgages').then(setMortgages).catch((e) => setError(e.message))
+    api.get<SavingsAccount[]>('/api/savings').then(setSavingsAccounts).catch((e) => setError(e.message))
+    api.get<Investment[]>('/api/investments').then(setInvestments).catch((e) => setError(e.message))
   }
   useEffect(load, [])
+
+  const destinationName = (type: ReinvestDestinationType, id: string | null) => {
+    if (type === 'Savings') return savingsAccounts.find((s) => s.id === id)?.name ?? 'unknown account'
+    if (type === 'Investment') return investments.find((i) => i.id === id)?.name ?? 'unknown investment'
+    return null
+  }
 
   async function addProperty(e: React.FormEvent) {
     e.preventDefault()
@@ -97,6 +117,12 @@ export default function MortgagesPage() {
         followOnRatePercent:
           form.rateType === 'Fixed' && form.followOnRatePercent ? Number(form.followOnRatePercent) : null,
         termMonthsRemaining: Number(form.termMonthsRemaining),
+        reinvestDestinationType: form.reinvestDestinationType,
+        reinvestDestinationId: form.reinvestDestinationType === 'None' ? null : form.reinvestDestinationId || null,
+        reinvestMonthlyAmount:
+          form.reinvestDestinationType === 'None' || !form.reinvestMonthlyAmount
+            ? null
+            : Number(form.reinvestMonthlyAmount),
       })
       setForm(emptyMortgage)
       load()
@@ -138,7 +164,8 @@ export default function MortgagesPage() {
       <h1>Mortgages &amp; property</h1>
       <p className="lede">
         Each mortgage has its own rate and term — fixed deals warn you when they're about to
-        roll onto a variable rate.
+        roll onto a variable rate. Once a mortgage is paid off, its payment can automatically
+        redirect into a savings account or investment instead of just disappearing.
       </p>
       {error && <div className="error-box">{error}</div>}
 
@@ -219,6 +246,7 @@ export default function MortgagesPage() {
                   <th>Type</th>
                   <th className="num">Term left (months)</th>
                   <th className="num">Monthly</th>
+                  <th>Once paid off</th>
                   <th className="num"></th>
                 </tr>
               </thead>
@@ -275,6 +303,30 @@ export default function MortgagesPage() {
                           onChange={(e) => mortgageEdit.updateDraft({ termMonthsRemaining: Number(e.target.value) })} />
                       </td>
                       <td className="num">{gbpExact.format(m.monthlyPayment)}</td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 160 }}>
+                          <ReinvestFields
+                            compact
+                            type={mortgageEdit.draft.reinvestDestinationType}
+                            destinationId={mortgageEdit.draft.reinvestDestinationId ?? ''}
+                            amount={mortgageEdit.draft.reinvestMonthlyAmount?.toString() ?? ''}
+                            onTypeChange={(t) => mortgageEdit.updateDraft({
+                              reinvestDestinationType: t,
+                              reinvestDestinationId: t === 'None' ? null : mortgageEdit.draft!.reinvestDestinationId,
+                              reinvestMonthlyAmount: t === 'None'
+                                ? null
+                                : mortgageEdit.draft!.reinvestMonthlyAmount ?? m.monthlyPayment,
+                            })}
+                            onDestinationChange={(id) => mortgageEdit.updateDraft({ reinvestDestinationId: id || null })}
+                            onAmountChange={(v) => mortgageEdit.updateDraft({
+                              reinvestMonthlyAmount: v ? Number(v) : null,
+                            })}
+                            savingsAccounts={savingsAccounts}
+                            investments={investments}
+                            suggestedAmount={m.monthlyPayment}
+                          />
+                        </div>
+                      </td>
                       <td className="num">
                         <div className="row-actions">
                           <button onClick={saveMortgage}>Save</button>
@@ -289,7 +341,9 @@ export default function MortgagesPage() {
                       <td className="num">{gbp.format(m.outstandingBalance)}</td>
                       <td className="num">{m.annualInterestRatePercent}%</td>
                       <td>
-                        {m.rateType === 'Fixed' ? (
+                        {m.isPaidOff ? (
+                          <span className="badge">Paid off</span>
+                        ) : m.rateType === 'Fixed' ? (
                           m.isFixedPeriodOver ? (
                             <span className="badge warn">Fix ended — now variable</span>
                           ) : (
@@ -300,12 +354,27 @@ export default function MortgagesPage() {
                         ) : (
                           <span className="badge warn">Variable</span>
                         )}
-                        {m.rateType === 'Fixed' && m.followOnRatePercent != null && !m.isFixedPeriodOver && (
+                        {!m.isPaidOff && m.rateType === 'Fixed' && m.followOnRatePercent != null && !m.isFixedPeriodOver && (
                           <span className="muted"> then {m.followOnRatePercent}%</span>
                         )}
                       </td>
                       <td className="num">{Math.floor(m.termMonthsRemaining / 12)}y {m.termMonthsRemaining % 12}m</td>
                       <td className="num">{gbpExact.format(m.monthlyPayment)}</td>
+                      <td>
+                        {m.reinvestDestinationType === 'None' ? (
+                          <span className="muted">—</span>
+                        ) : (
+                          <>
+                            <span className={`badge ${m.isPaidOff ? '' : 'warn'}`}>
+                              {m.isPaidOff ? 'Reinvesting' : 'Will reinvest'}
+                            </span>
+                            <div className="muted">
+                              {gbpExact.format(m.reinvestMonthlyAmount ?? 0)}/mo →{' '}
+                              {destinationName(m.reinvestDestinationType, m.reinvestDestinationId)}
+                            </div>
+                          </>
+                        )}
+                      </td>
                       <td className="num">
                         <div className="row-actions">
                           <button className="secondary" onClick={() => mortgageEdit.startEdit(m)}>Edit</button>
@@ -370,6 +439,16 @@ export default function MortgagesPage() {
             <input type="number" min="1" step="1" value={form.termMonthsRemaining}
               onChange={(e) => set({ termMonthsRemaining: e.target.value })} required />
           </div>
+          <ReinvestFields
+            type={form.reinvestDestinationType}
+            destinationId={form.reinvestDestinationId}
+            amount={form.reinvestMonthlyAmount}
+            onTypeChange={(t) => set({ reinvestDestinationType: t, reinvestDestinationId: '' })}
+            onDestinationChange={(id) => set({ reinvestDestinationId: id })}
+            onAmountChange={(v) => set({ reinvestMonthlyAmount: v })}
+            savingsAccounts={savingsAccounts}
+            investments={investments}
+          />
           <button type="submit">Add mortgage</button>
         </form>
       </div>

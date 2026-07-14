@@ -49,6 +49,30 @@ public static class MonthlyStepCalculator
                 NewBalance = newBalance,
             });
 
+        // Once a mortgage or custom debt is fully paid off, its configured
+        // monthly amount is redirected into a savings account or investment
+        // instead of just disappearing, so paying off a debt keeps growing
+        // wealth rather than stalling it.
+        void ApplyReinvestment(ReinvestDestinationType type, Guid? destinationId, decimal? monthlyAmount)
+        {
+            if (type == ReinvestDestinationType.None || destinationId is not { } id || monthlyAmount is not > 0m)
+                return;
+            if (type == ReinvestDestinationType.Savings)
+            {
+                var account = user.SavingsAccounts.SingleOrDefault(s => s.Id == id);
+                if (account is null) return;
+                account.Balance = (account.Balance + monthlyAmount.Value).RoundToPence();
+                Record("Savings", account.Name, 0m, 0m, account.Balance, monthlyAmount.Value);
+            }
+            else if (type == ReinvestDestinationType.Investment)
+            {
+                var investment = user.Investments.SingleOrDefault(i => i.Id == id);
+                if (investment is null) return;
+                investment.CurrentValue = (investment.CurrentValue + monthlyAmount.Value).RoundToPence();
+                Record("Investments", investment.Name, 0m, 0m, investment.CurrentValue, monthlyAmount.Value);
+            }
+        }
+
         foreach (var account in user.SavingsAccounts)
         {
             // Interest is earned on the pre-deposit balance: this month's
@@ -100,7 +124,15 @@ public static class MonthlyStepCalculator
 
         foreach (var mortgage in user.Mortgages)
         {
-            if (mortgage.OutstandingBalance <= 0 || mortgage.TermMonthsRemaining <= 0)
+            if (mortgage.OutstandingBalance <= 0)
+            {
+                // Already paid off coming into this payday: redirect from
+                // this month, not the month the final payment lands.
+                ApplyReinvestment(mortgage.ReinvestDestinationType, mortgage.ReinvestDestinationId,
+                    mortgage.ReinvestMonthlyAmount);
+                continue;
+            }
+            if (mortgage.TermMonthsRemaining <= 0)
                 continue;
             var rate = EffectiveRate(mortgage, date);
             var payment = MortgageCalculator.MonthlyPayment(
@@ -119,7 +151,10 @@ public static class MonthlyStepCalculator
         foreach (var debt in user.CustomDebts)
         {
             if (debt.Balance <= 0)
+            {
+                ApplyReinvestment(debt.ReinvestDestinationType, debt.ReinvestDestinationId, debt.ReinvestMonthlyAmount);
                 continue;
+            }
             var rate = debt.AnnualInterestRatePercent ?? 0m;
             var interest = (debt.Balance * rate / 100m / 12m).RoundToPence();
             var payment = Math.Min(debt.MonthlyPayment ?? 0m, (debt.Balance + interest).RoundToPence());

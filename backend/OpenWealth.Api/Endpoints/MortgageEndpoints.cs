@@ -23,10 +23,13 @@ public static class MortgageEndpoints
 
         group.MapPost("/", async (MortgageRequest req, ClaimsPrincipal p, AppDbContext db) =>
         {
-            var error = await ValidatePropertyLink(req.PropertyId, p.UserId(), db);
+            var userId = p.UserId();
+            var error = await ValidatePropertyLink(req.PropertyId, userId, db)
+                ?? await ReinvestDestinationValidation.Validate(
+                    db, userId, req.ReinvestDestinationType, req.ReinvestDestinationId, req.ReinvestMonthlyAmount);
             if (error is not null) return error;
 
-            var mortgage = new Mortgage { Id = Guid.NewGuid(), UserId = p.UserId(), Name = req.Name };
+            var mortgage = new Mortgage { Id = Guid.NewGuid(), UserId = userId, Name = req.Name };
             Apply(mortgage, req);
             db.Mortgages.Add(mortgage);
             await db.SaveChangesAsync();
@@ -35,9 +38,12 @@ public static class MortgageEndpoints
 
         group.MapPut("/{id:guid}", async (Guid id, MortgageRequest req, ClaimsPrincipal p, AppDbContext db) =>
         {
-            var mortgage = await db.Mortgages.SingleOrDefaultAsync(m => m.Id == id && m.UserId == p.UserId());
+            var userId = p.UserId();
+            var mortgage = await db.Mortgages.SingleOrDefaultAsync(m => m.Id == id && m.UserId == userId);
             if (mortgage is null) return Results.NotFound();
-            var error = await ValidatePropertyLink(req.PropertyId, p.UserId(), db);
+            var error = await ValidatePropertyLink(req.PropertyId, userId, db)
+                ?? await ReinvestDestinationValidation.Validate(
+                    db, userId, req.ReinvestDestinationType, req.ReinvestDestinationId, req.ReinvestMonthlyAmount);
             if (error is not null) return error;
             Apply(mortgage, req);
             await db.SaveChangesAsync();
@@ -69,6 +75,9 @@ public static class MortgageEndpoints
         m.FixedRateEndDate = req.RateType == MortgageRateType.Fixed ? req.FixedRateEndDate : null;
         m.FollowOnRatePercent = req.RateType == MortgageRateType.Fixed ? req.FollowOnRatePercent : null;
         m.TermMonthsRemaining = req.TermMonthsRemaining;
+        m.ReinvestDestinationType = req.ReinvestDestinationType;
+        m.ReinvestDestinationId = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestDestinationId;
+        m.ReinvestMonthlyAmount = req.ReinvestDestinationType == ReinvestDestinationType.None ? null : req.ReinvestMonthlyAmount;
     }
 
     private static object ToResponse(Mortgage m) => new
@@ -82,7 +91,11 @@ public static class MortgageEndpoints
         m.FixedRateEndDate,
         m.FollowOnRatePercent,
         m.TermMonthsRemaining,
+        m.ReinvestDestinationType,
+        m.ReinvestDestinationId,
+        m.ReinvestMonthlyAmount,
         MonthlyPayment = MortgageCalculator.MonthlyPayment(m),
         IsFixedPeriodOver = MortgageCalculator.IsFixedPeriodOver(m, DateOnly.FromDateTime(DateTime.UtcNow)),
+        IsPaidOff = m.OutstandingBalance <= 0,
     };
 }

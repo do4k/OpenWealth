@@ -218,6 +218,99 @@ public class MonthlyStepCalculatorTests
     }
 
     [Fact]
+    public void PaidOffMortgageReinvestsIntoSavingsAccount()
+    {
+        var user = NewUser();
+        var savings = new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "ISA", Type = SavingsAccountType.CashIsa, Balance = 5_000m,
+        };
+        user.SavingsAccounts.Add(savings);
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "Home", OutstandingBalance = 0m,
+            AnnualInterestRatePercent = 4m, RateType = MortgageRateType.Variable, TermMonthsRemaining = 0,
+            ReinvestDestinationType = ReinvestDestinationType.Savings,
+            ReinvestDestinationId = savings.Id, ReinvestMonthlyAmount = 1_200m,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        var e = Assert.Single(events);
+        Assert.Equal("Savings", e.Category);
+        Assert.Equal("ISA", e.ItemName);
+        Assert.Equal(1_200m, e.DepositAmount);
+        Assert.Equal(6_200m, user.SavingsAccounts[0].Balance);
+    }
+
+    [Fact]
+    public void PaidOffMortgageReinvestsIntoInvestment()
+    {
+        var user = NewUser();
+        var investment = new Investment
+        {
+            Id = Guid.NewGuid(), Name = "S&S ISA", Type = InvestmentType.StocksAndSharesIsa, CurrentValue = 10_000m,
+        };
+        user.Investments.Add(investment);
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "Home", OutstandingBalance = 0m,
+            AnnualInterestRatePercent = 4m, RateType = MortgageRateType.Variable, TermMonthsRemaining = 0,
+            ReinvestDestinationType = ReinvestDestinationType.Investment,
+            ReinvestDestinationId = investment.Id, ReinvestMonthlyAmount = 900m,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        var e = Assert.Single(events);
+        Assert.Equal("Investments", e.Category);
+        Assert.Equal(900m, e.DepositAmount);
+        Assert.Equal(10_900m, user.Investments[0].CurrentValue);
+    }
+
+    [Fact]
+    public void MortgageDoesNotReinvestInTheSameMonthItIsPaidOff()
+    {
+        var user = NewUser();
+        var savings = new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "ISA", Type = SavingsAccountType.CashIsa, Balance = 5_000m,
+        };
+        user.SavingsAccounts.Add(savings);
+        user.Mortgages.Add(new Mortgage
+        {
+            // Sized so the single remaining payment exactly clears the balance this month.
+            Id = Guid.NewGuid(), Name = "Home", OutstandingBalance = 1_000m,
+            AnnualInterestRatePercent = 6m, RateType = MortgageRateType.Variable, TermMonthsRemaining = 1,
+            ReinvestDestinationType = ReinvestDestinationType.Savings,
+            ReinvestDestinationId = savings.Id, ReinvestMonthlyAmount = 1_005m,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        Assert.Equal(0m, user.Mortgages[0].OutstandingBalance);
+        var e = Assert.Single(events);
+        Assert.Equal("Mortgages", e.Category);
+        // No reinvestment yet — the savings balance is untouched this month.
+        Assert.Equal(5_000m, user.SavingsAccounts[0].Balance);
+    }
+
+    [Fact]
+    public void PaidOffMortgageWithoutDestinationConfiguredDoesNothing()
+    {
+        var user = NewUser();
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "Home", OutstandingBalance = 0m,
+            AnnualInterestRatePercent = 4m, RateType = MortgageRateType.Variable, TermMonthsRemaining = 0,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        Assert.Empty(events);
+    }
+
+    [Fact]
     public void CustomDebtAccruesInterestAndTakesConfiguredPayment()
     {
         var user = NewUser();
@@ -265,6 +358,48 @@ public class MonthlyStepCalculatorTests
         var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
 
         Assert.Equal(500m, user.CustomDebts[0].Balance);
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public void PaidOffCustomDebtReinvestsIntoSavingsAccount()
+    {
+        var user = NewUser();
+        var savings = new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "Rainy day fund", Type = SavingsAccountType.EasyAccess, Balance = 1_000m,
+        };
+        user.SavingsAccounts.Add(savings);
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Paid off card", Balance = 0m,
+            ReinvestDestinationType = ReinvestDestinationType.Savings,
+            ReinvestDestinationId = savings.Id, ReinvestMonthlyAmount = 150m,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        var e = Assert.Single(events);
+        Assert.Equal("Savings", e.Category);
+        Assert.Equal(150m, e.DepositAmount);
+        Assert.Equal(1_150m, user.SavingsAccounts[0].Balance);
+    }
+
+    [Fact]
+    public void ReinvestmentSkipsAMissingDestinationWithoutCrashing()
+    {
+        // Defensive: the endpoint enforces the destination exists, but the
+        // calculator itself shouldn't blow up if that invariant is broken.
+        var user = NewUser();
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Orphaned link", Balance = 0m,
+            ReinvestDestinationType = ReinvestDestinationType.Savings,
+            ReinvestDestinationId = Guid.NewGuid(), ReinvestMonthlyAmount = 100m,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
         Assert.Empty(events);
     }
 
@@ -486,6 +621,37 @@ public class ProjectionServiceTests
         var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 30);
 
         Assert.Equal(0m, points[^1].Mortgages);
+    }
+
+    [Fact]
+    public void PayingOffAMortgageRedirectsItsPaymentIntoSavingsInProjection()
+    {
+        var user = NewUser();
+        var savings = new SavingsAccount
+        {
+            Id = Guid.NewGuid(), Name = "S", Type = SavingsAccountType.EasyAccess, Balance = 0m,
+        };
+        user.SavingsAccounts.Add(savings);
+        var monthlyPayment = MortgageCalculator.MonthlyPayment(50_000m, 5m, 24);
+        user.Mortgages.Add(new Mortgage
+        {
+            Id = Guid.NewGuid(), Name = "M", OutstandingBalance = 50_000m,
+            AnnualInterestRatePercent = 5m, RateType = MortgageRateType.Variable,
+            TermMonthsRemaining = 24,
+            ReinvestDestinationType = ReinvestDestinationType.Savings,
+            ReinvestDestinationId = savings.Id, ReinvestMonthlyAmount = monthlyPayment,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 30);
+
+        // Paid off exactly at month 24: no reinvestment has landed yet.
+        Assert.Equal(0m, points[24].Mortgages);
+        Assert.Equal(0m, points[24].Savings);
+        // From month 25 the former mortgage payment lands in savings instead —
+        // 6 more paydays (25..30) at the same monthly amount, no compounding
+        // since this savings account carries no interest rate of its own.
+        Assert.Equal(6 * monthlyPayment, points[30].Savings);
+        Assert.True(points[30].NetWorth > points[24].NetWorth);
     }
 
     [Fact]

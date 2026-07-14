@@ -1,6 +1,7 @@
 export type StudentLoanPlan = 'Plan1' | 'Plan2' | 'Plan4' | 'Plan5' | 'Postgraduate'
 export type PensionMethod = 'SalarySacrifice' | 'NetPay' | 'ReliefAtSource'
 export type MortgageRateType = 'Fixed' | 'Variable'
+export type ReinvestDestinationType = 'None' | 'Savings' | 'Investment'
 export type SavingsAccountType =
   | 'CurrentAccount' | 'EasyAccess' | 'FixedTerm' | 'CashIsa' | 'PremiumBonds' | 'Other'
 export type InvestmentType =
@@ -46,6 +47,10 @@ export interface Mortgage {
   termMonthsRemaining: number
   monthlyPayment: number
   isFixedPeriodOver: boolean
+  reinvestDestinationType: ReinvestDestinationType
+  reinvestDestinationId: string | null
+  reinvestMonthlyAmount: number | null
+  isPaidOff: boolean
 }
 
 export interface SavingsAccount {
@@ -79,6 +84,10 @@ export interface CustomDebt {
   balance: number
   annualInterestRatePercent: number | null
   monthlyPayment: number | null
+  reinvestDestinationType: ReinvestDestinationType
+  reinvestDestinationId: string | null
+  reinvestMonthlyAmount: number | null
+  isPaidOff: boolean
 }
 
 export interface IncomeDetails {
