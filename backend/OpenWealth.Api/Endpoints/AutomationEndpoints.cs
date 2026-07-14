@@ -95,16 +95,5 @@ public static class AutomationEndpoints
     }
 
     private static async Task<Models.User> LoadUser(Guid userId, AppDbContext db) =>
-        await db.Users
-            .Include(u => u.Income)
-            .Include(u => u.TaxSettings)
-            .Include(u => u.StudentLoanPlanSettings)
-            .Include(u => u.StudentLoans)
-            .Include(u => u.SavingsAccounts)
-            .Include(u => u.Mortgages)
-            .Include(u => u.Properties)
-            .Include(u => u.Investments)
-            .Include(u => u.CustomAssets)
-            .Include(u => u.CustomDebts)
-            .SingleAsync(u => u.Id == userId);
+        await db.Users.WithWealthData().SingleAsync(u => u.Id == userId);
 }
