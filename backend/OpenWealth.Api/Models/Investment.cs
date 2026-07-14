@@ -19,4 +19,12 @@ public class Investment
     public decimal CurrentValue { get; set; }
     /// <summary>Assumed annual growth used only for projections; balances are never changed automatically.</summary>
     public decimal? ExpectedAnnualGrowthPercent { get; set; }
+    /// <summary>
+    /// When true (only meaningful for <see cref="InvestmentType.PensionPot"/>), payday
+    /// automation adds a month of the employee + employer pension contributions from
+    /// the income page to this investment. At most one investment per user can have
+    /// this set — it's enforced by the endpoint, not the database, since it mirrors
+    /// the single employment record income currently models.
+    /// </summary>
+    public bool ReceivesIncomePensionContributions { get; set; }
 }

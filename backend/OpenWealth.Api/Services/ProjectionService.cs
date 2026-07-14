@@ -77,6 +77,7 @@ public static class ProjectionService
         {
             Id = i.Id, Name = i.Name, Type = i.Type, CurrentValue = i.CurrentValue,
             ExpectedAnnualGrowthPercent = i.ExpectedAnnualGrowthPercent,
+            ReceivesIncomePensionContributions = i.ReceivesIncomePensionContributions,
         }).ToList(),
         Mortgages = user.Mortgages.Select(m => new Mortgage
         {

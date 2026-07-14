@@ -19,10 +19,7 @@ public static class TaxCalculator
         IReadOnlyList<StudentLoanPlanSetting> planSettings)
     {
         var gross = income.AnnualSalary + income.AnnualBonus;
-
-        var pensionablePay = income.PensionOnBonus ? gross : income.AnnualSalary;
-        var employeePension = (pensionablePay * income.EmployeePensionPercent / 100m).RoundToPence();
-        var employerPension = (pensionablePay * income.EmployerPensionPercent / 100m).RoundToPence();
+        var (employeePension, employerPension) = AnnualPensionContributions(income);
 
         // Salary sacrifice reduces pay before both tax and NI. Net-pay
         // arrangements reduce taxable pay only. Relief-at-source contributions
@@ -87,6 +84,16 @@ public static class TaxCalculator
             AnnualTakeHome: takeHome.RoundToPence(),
             MonthlyTakeHome: (takeHome / 12m).RoundToPence(),
             FamilyBenefits: CalculateFamilyBenefits(adjustedNetIncome, income.ChildrenReceivingChildBenefit, tax));
+    }
+
+    /// <summary>Annual employee and employer pension contributions from salary/bonus and the income-page percentages.</summary>
+    public static (decimal Employee, decimal Employer) AnnualPensionContributions(IncomeDetails income)
+    {
+        var gross = income.AnnualSalary + income.AnnualBonus;
+        var pensionablePay = income.PensionOnBonus ? gross : income.AnnualSalary;
+        var employee = (pensionablePay * income.EmployeePensionPercent / 100m).RoundToPence();
+        var employer = (pensionablePay * income.EmployerPensionPercent / 100m).RoundToPence();
+        return (employee, employer);
     }
 
     public static FamilyBenefits CalculateFamilyBenefits(decimal adjustedNetIncome, int children, TaxSettings tax)

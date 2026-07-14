@@ -28,7 +28,10 @@ read-only and passphrase-protected.
 - **Savings & investments** — cash accounts, ISAs, Premium Bonds, pension pots, GIAs
   and more, summed into your net worth. Savings accounts can carry a monthly standing
   order that payday automation deposits for you, compounding with interest in both the
-  recorded history and the projections.
+  recorded history and the projections. One pension pot investment can be linked to
+  automatically receive the employee + employer pension contributions set up on the
+  Income page every payday, instead of that money just vanishing from take-home pay
+  with nowhere tracked for it to land.
 - **Other assets & debts** — anything that doesn't fit elsewhere: a car, jewellery or a
   business stake as an asset; a credit card, car finance or personal loan as a debt.
   Debts can carry an interest rate and monthly payment, which payday automation accrues

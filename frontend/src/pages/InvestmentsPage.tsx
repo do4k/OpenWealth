@@ -20,6 +20,7 @@ function toRequest(i: Investment) {
     type: i.type,
     currentValue: i.currentValue,
     expectedAnnualGrowthPercent: i.expectedAnnualGrowthPercent,
+    receivesIncomePensionContributions: i.type === 'PensionPot' && i.receivesIncomePensionContributions,
   }
 }
 
@@ -29,6 +30,7 @@ export default function InvestmentsPage() {
   const [type, setType] = useState<InvestmentType>('StocksAndSharesIsa')
   const [value, setValue] = useState('')
   const [growth, setGrowth] = useState('')
+  const [pensionContribution, setPensionContribution] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const edit = useInlineEdit<Investment>()
 
@@ -46,8 +48,9 @@ export default function InvestmentsPage() {
         type,
         currentValue: Number(value),
         expectedAnnualGrowthPercent: growth ? Number(growth) : null,
+        receivesIncomePensionContributions: type === 'PensionPot' && pensionContribution,
       })
-      setName(''); setValue(''); setGrowth('')
+      setName(''); setValue(''); setGrowth(''); setPensionContribution(false)
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add investment.')
@@ -88,6 +91,7 @@ export default function InvestmentsPage() {
                 <th>Type</th>
                 <th className="num">Current value</th>
                 <th className="num">Projected growth</th>
+                <th className="num">Payday contribution</th>
                 <th className="num"></th>
               </tr>
             </thead>
@@ -101,7 +105,14 @@ export default function InvestmentsPage() {
                     </td>
                     <td>
                       <select value={edit.draft.type}
-                        onChange={(e) => edit.updateDraft({ type: e.target.value as InvestmentType })}>
+                        onChange={(e) => {
+                          const nextType = e.target.value as InvestmentType
+                          edit.updateDraft({
+                            type: nextType,
+                            receivesIncomePensionContributions:
+                              nextType === 'PensionPot' && edit.draft!.receivesIncomePensionContributions,
+                          })
+                        }}>
                         {TYPES.map((t) => (
                           <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
@@ -119,6 +130,15 @@ export default function InvestmentsPage() {
                         })} />
                     </td>
                     <td className="num">
+                      {edit.draft.type === 'PensionPot' ? (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'flex-end' }}>
+                          <input type="checkbox" checked={edit.draft.receivesIncomePensionContributions}
+                            onChange={(e) => edit.updateDraft({ receivesIncomePensionContributions: e.target.checked })} />
+                          Auto
+                        </label>
+                      ) : '—'}
+                    </td>
+                    <td className="num">
                       <div className="row-actions">
                         <button onClick={saveEdit}>Save</button>
                         <button className="secondary" onClick={edit.cancelEdit}>Cancel</button>
@@ -132,6 +152,11 @@ export default function InvestmentsPage() {
                     <td className="num">{gbp.format(i.currentValue)}</td>
                     <td className="num">
                       {i.expectedAnnualGrowthPercent != null ? `${i.expectedAnnualGrowthPercent}%/yr` : '—'}
+                    </td>
+                    <td className="num">
+                      {i.receivesIncomePensionContributions ? (
+                        <span className="badge">Auto</span>
+                      ) : '—'}
                     </td>
                     <td className="num">
                       <div className="row-actions">
@@ -152,7 +177,11 @@ export default function InvestmentsPage() {
           </div>
           <div className="field">
             <label>Type</label>
-            <select value={type} onChange={(e) => setType(e.target.value as InvestmentType)}>
+            <select value={type} onChange={(e) => {
+              const nextType = e.target.value as InvestmentType
+              setType(nextType)
+              if (nextType !== 'PensionPot') setPensionContribution(false)
+            }}>
               {TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
@@ -168,7 +197,20 @@ export default function InvestmentsPage() {
             <input type="number" min="-50" max="50" step="0.1" value={growth}
               onChange={(e) => setGrowth(e.target.value)} />
           </div>
+          {type === 'PensionPot' && (
+            <div className="field checkbox">
+              <input id="pension-contribution" type="checkbox" checked={pensionContribution}
+                onChange={(e) => setPensionContribution(e.target.checked)} />
+              <label htmlFor="pension-contribution">Automatically add my pension contributions here</label>
+            </div>
+          )}
           <button type="submit">Add investment</button>
+          {type === 'PensionPot' && pensionContribution && (
+            <p className="muted" style={{ flexBasis: '100%', margin: 0 }}>
+              Uses the employee + employer pension % from your Income page every payday. Only one pension
+              pot can be linked at a time — enabling this will unlink any other.
+            </p>
+          )}
         </form>
       </div>
     </>

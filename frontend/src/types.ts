@@ -63,6 +63,7 @@ export interface Investment {
   type: InvestmentType
   currentValue: number
   expectedAnnualGrowthPercent: number | null
+  receivesIncomePensionContributions: boolean
 }
 
 export interface CustomAsset {

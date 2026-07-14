@@ -62,6 +62,20 @@ public static class MonthlyStepCalculator
             Record("Savings", account.Name, interest, 0m, account.Balance, deposit);
         }
 
+        // At most one investment can be linked to receive the income page's
+        // pension contributions (enforced by the endpoint); apply a month of
+        // employee + employer contributions to it, same as a standing deposit.
+        var monthlyPensionContribution = MonthlyPensionContribution(user);
+        if (monthlyPensionContribution > 0)
+        {
+            foreach (var investment in user.Investments.Where(
+                i => i.Type == InvestmentType.PensionPot && i.ReceivesIncomePensionContributions))
+            {
+                investment.CurrentValue = (investment.CurrentValue + monthlyPensionContribution).RoundToPence();
+                Record("Investments", investment.Name, 0m, 0m, investment.CurrentValue, monthlyPensionContribution);
+            }
+        }
+
         // A month's student loan repayment comes out of pay on payday; interest
         // accrues at the globally configured per-plan rate. Repayments are
         // shared across loans of the same plan in proportion to balance.
@@ -123,6 +137,15 @@ public static class MonthlyStepCalculator
         MortgageCalculator.IsFixedPeriodOver(m, date) && m.FollowOnRatePercent is { } followOn
             ? followOn
             : m.AnnualInterestRatePercent;
+
+    /// <summary>Monthly employee + employer pension contribution from the income page, or 0 without income set up.</summary>
+    public static decimal MonthlyPensionContribution(User user)
+    {
+        if (user.Income is null)
+            return 0m;
+        var (employee, employer) = TaxCalculator.AnnualPensionContributions(user.Income);
+        return ((employee + employer) / 12m).RoundToPence();
+    }
 
     /// <summary>Monthly student loan repayment per plan, derived from the user's income.</summary>
     public static Dictionary<StudentLoanPlan, decimal> MonthlyLoanRepayments(User user)
