@@ -7,8 +7,10 @@ const SERIES = [
   { key: 'netWorth', label: 'Net worth', color: '#3987e5' },
   { key: 'savings', label: 'Savings', color: '#199e70' },
   { key: 'investments', label: 'Investments', color: '#c98500' },
+  { key: 'otherAssets', label: 'Other assets', color: '#d55181' },
   { key: 'mortgages', label: 'Mortgages (owed)', color: '#e66767' },
   { key: 'studentLoans', label: 'Student loans (owed)', color: '#9085e9' },
+  { key: 'otherDebts', label: 'Other debts (owed)', color: '#d95926' },
 ] as const
 
 type SeriesKey = (typeof SERIES)[number]['key']
@@ -391,8 +393,10 @@ function DataTable({ historic, projected }: ChartProps) {
             <th className="num">Net worth</th>
             <th className="num">Savings</th>
             <th className="num">Investments</th>
+            <th className="num">Other assets</th>
             <th className="num">Mortgages</th>
             <th className="num">Student loans</th>
+            <th className="num">Other debts</th>
           </tr>
         </thead>
         <tbody>
@@ -403,8 +407,10 @@ function DataTable({ historic, projected }: ChartProps) {
               <td className="num">{gbp.format(r.netWorth)}</td>
               <td className="num">{gbp.format(r.savings)}</td>
               <td className="num">{gbp.format(r.investments)}</td>
+              <td className="num">{gbp.format(r.otherAssets)}</td>
               <td className="num">{gbp.format(r.mortgages)}</td>
               <td className="num">{gbp.format(r.studentLoans)}</td>
+              <td className="num">{gbp.format(r.otherDebts)}</td>
             </tr>
           ))}
         </tbody>

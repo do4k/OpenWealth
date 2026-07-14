@@ -29,6 +29,14 @@ read-only and passphrase-protected.
   and more, summed into your net worth. Savings accounts can carry a monthly standing
   order that payday automation deposits for you, compounding with interest in both the
   recorded history and the projections.
+- **Other assets & debts** — anything that doesn't fit elsewhere: a car, jewellery or a
+  business stake as an asset; a credit card, car finance or personal loan as a debt.
+  Debts can carry an interest rate and monthly payment, which payday automation accrues
+  and pays down just like a mortgage; assets can carry a projected growth rate (negative
+  for depreciating things like cars) that only affects projections.
+- **Edit everything in place** — every item (loans, properties, mortgages, savings,
+  investments, other assets and debts) can be edited directly in its row, so correcting
+  a balance never means deleting and re-adding it.
 - **Dashboard** — net worth, assets vs liabilities, full item breakdown, and an annual
   income statement down to monthly take-home.
 - **Payday automation** — opt in and every payday (your chosen day of the month) savings

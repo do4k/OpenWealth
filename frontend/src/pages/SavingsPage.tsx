@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, gbp } from '../api'
+import { useInlineEdit } from '../hooks/useInlineEdit'
 import type { SavingsAccount, SavingsAccountType } from '../types'
 
 const TYPES: { value: SavingsAccountType; label: string }[] = [
@@ -13,6 +14,16 @@ const TYPES: { value: SavingsAccountType; label: string }[] = [
 
 const typeLabel = (t: SavingsAccountType) => TYPES.find((x) => x.value === t)?.label ?? t
 
+function toRequest(a: SavingsAccount) {
+  return {
+    name: a.name,
+    type: a.type,
+    balance: a.balance,
+    annualInterestRatePercent: a.annualInterestRatePercent,
+    monthlyDeposit: a.monthlyDeposit,
+  }
+}
+
 export default function SavingsPage() {
   const [accounts, setAccounts] = useState<SavingsAccount[]>([])
   const [name, setName] = useState('')
@@ -21,6 +32,7 @@ export default function SavingsPage() {
   const [rate, setRate] = useState('')
   const [deposit, setDeposit] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const edit = useInlineEdit<SavingsAccount>()
 
   const load = () => {
     api.get<SavingsAccount[]>('/api/savings').then(setAccounts).catch((e) => setError(e.message))
@@ -42,6 +54,18 @@ export default function SavingsPage() {
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add account.')
+    }
+  }
+
+  async function saveEdit() {
+    if (!edit.draft) return
+    setError(null)
+    try {
+      await api.put(`/api/savings/${edit.editingId}`, toRequest(edit.draft))
+      edit.cancelEdit()
+      load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save changes.')
     }
   }
 
@@ -72,20 +96,59 @@ export default function SavingsPage() {
               </tr>
             </thead>
             <tbody>
-              {accounts.map((a) => (
-                <tr key={a.id}>
-                  <td>{a.name}</td>
-                  <td>{typeLabel(a.type)}</td>
-                  <td className="num">{gbp.format(a.balance)}</td>
-                  <td className="num">{a.annualInterestRatePercent != null ? `${a.annualInterestRatePercent}%` : '—'}</td>
-                  <td className="num">{a.monthlyDeposit !== 0 ? gbp.format(a.monthlyDeposit) : '—'}</td>
-                  <td className="num">
-                    <div className="row-actions">
-                      <button className="danger" onClick={() => remove(a.id)}>Remove</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {accounts.map((a) =>
+                edit.isEditing(a.id) && edit.draft ? (
+                  <tr key={a.id} className="editing-row">
+                    <td>
+                      <input value={edit.draft.name}
+                        onChange={(e) => edit.updateDraft({ name: e.target.value })} />
+                    </td>
+                    <td>
+                      <select value={edit.draft.type}
+                        onChange={(e) => edit.updateDraft({ type: e.target.value as SavingsAccountType })}>
+                        {TYPES.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="num">
+                      <input type="number" min="0" step="0.01" value={edit.draft.balance}
+                        onChange={(e) => edit.updateDraft({ balance: Number(e.target.value) })} />
+                    </td>
+                    <td className="num">
+                      <input type="number" min="0" max="100" step="0.01"
+                        value={edit.draft.annualInterestRatePercent ?? ''}
+                        onChange={(e) => edit.updateDraft({
+                          annualInterestRatePercent: e.target.value ? Number(e.target.value) : null,
+                        })} />
+                    </td>
+                    <td className="num">
+                      <input type="number" step="0.01" value={edit.draft.monthlyDeposit}
+                        onChange={(e) => edit.updateDraft({ monthlyDeposit: Number(e.target.value) })} />
+                    </td>
+                    <td className="num">
+                      <div className="row-actions">
+                        <button onClick={saveEdit}>Save</button>
+                        <button className="secondary" onClick={edit.cancelEdit}>Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={a.id}>
+                    <td>{a.name}</td>
+                    <td>{typeLabel(a.type)}</td>
+                    <td className="num">{gbp.format(a.balance)}</td>
+                    <td className="num">{a.annualInterestRatePercent != null ? `${a.annualInterestRatePercent}%` : '—'}</td>
+                    <td className="num">{a.monthlyDeposit !== 0 ? gbp.format(a.monthlyDeposit) : '—'}</td>
+                    <td className="num">
+                      <div className="row-actions">
+                        <button className="secondary" onClick={() => edit.startEdit(a)}>Edit</button>
+                        <button className="danger" onClick={() => remove(a.id)}>Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         )}

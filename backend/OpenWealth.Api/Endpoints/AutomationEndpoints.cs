@@ -104,5 +104,7 @@ public static class AutomationEndpoints
             .Include(u => u.Mortgages)
             .Include(u => u.Properties)
             .Include(u => u.Investments)
+            .Include(u => u.CustomAssets)
+            .Include(u => u.CustomDebts)
             .SingleAsync(u => u.Id == userId);
 }

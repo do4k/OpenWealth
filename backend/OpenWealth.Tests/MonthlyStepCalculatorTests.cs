@@ -218,6 +218,89 @@ public class MonthlyStepCalculatorTests
     }
 
     [Fact]
+    public void CustomDebtAccruesInterestAndTakesConfiguredPayment()
+    {
+        var user = NewUser();
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Credit card", Balance = 2_000m,
+            AnnualInterestRatePercent = 24m, MonthlyPayment = 150m,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        // Interest: 2,000 * 24% / 12 = 40
+        var e = Assert.Single(events);
+        Assert.Equal("Other debts", e.Category);
+        Assert.Equal(40m, e.InterestAmount);
+        Assert.Equal(150m, e.PaymentAmount);
+        Assert.Equal(2_000m + 40m - 150m, user.CustomDebts[0].Balance);
+    }
+
+    [Fact]
+    public void CustomDebtPaymentNeverOverpaysBalance()
+    {
+        var user = NewUser();
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Almost gone", Balance = 30m,
+            AnnualInterestRatePercent = 20m, MonthlyPayment = 500m,
+        });
+
+        MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        Assert.Equal(0m, user.CustomDebts[0].Balance);
+    }
+
+    [Fact]
+    public void CustomDebtWithNoRateOrPaymentIsUntouched()
+    {
+        var user = NewUser();
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Interest-free tracker", Balance = 500m,
+            AnnualInterestRatePercent = null, MonthlyPayment = null,
+        });
+
+        var events = MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        Assert.Equal(500m, user.CustomDebts[0].Balance);
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public void CustomDebtWithOnlyInterestAccruesButIsNotPaidDown()
+    {
+        var user = NewUser();
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Growing balance", Balance = 1_000m,
+            AnnualInterestRatePercent = 12m, MonthlyPayment = null,
+        });
+
+        MonthlyStepCalculator.ApplyMonthlyStep(user, Date);
+
+        // 1,000 * 12% / 12 = 10, no payment configured
+        Assert.Equal(1_010m, user.CustomDebts[0].Balance);
+    }
+
+    [Fact]
+    public void SnapshotIncludesCustomAssetsAndDebts()
+    {
+        var user = NewUser();
+        user.CustomAssets.Add(new CustomAsset { Id = Guid.NewGuid(), Name = "Car", Value = 8_000m });
+        user.CustomDebts.Add(new CustomDebt { Id = Guid.NewGuid(), Name = "Card", Balance = 1_200m });
+
+        var snap = MonthlyStepCalculator.TakeSnapshot(user, Date);
+
+        Assert.Equal(8_000m, snap.OtherAssets);
+        Assert.Equal(1_200m, snap.OtherDebts);
+        Assert.Equal(8_000m, snap.TotalAssets);
+        Assert.Equal(1_200m, snap.TotalLiabilities);
+        Assert.Equal(6_800m, snap.NetWorth);
+    }
+
+    [Fact]
     public void CatchUpAppliesEachMissedPayday()
     {
         var user = NewUser();
@@ -396,5 +479,47 @@ public class ProjectionServiceTests
         Assert.Equal(0m, points[^1].StudentLoans);
         // Balance never goes negative on the way down
         Assert.All(points, pt => Assert.True(pt.StudentLoans >= 0m));
+    }
+
+    [Fact]
+    public void CustomAssetGrowsAndCustomDebtAmortisesInProjection()
+    {
+        var user = NewUser();
+        user.CustomAssets.Add(new CustomAsset
+        {
+            Id = Guid.NewGuid(), Name = "Car", Value = 10_000m, ExpectedAnnualGrowthPercent = -12m,
+        });
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Card", Balance = 500m,
+            AnnualInterestRatePercent = 20m, MonthlyPayment = 100m,
+        });
+
+        var points = ProjectionService.Project(user, new DateOnly(2026, 7, 13), 12);
+
+        // Depreciating asset trends down, never negative
+        Assert.True(points[^1].OtherAssets < points[0].OtherAssets);
+        Assert.All(points, pt => Assert.True(pt.OtherAssets >= 0m));
+        // Debt paid off well within 12 months at £100/mo on a £500 balance
+        Assert.Equal(0m, points[^1].OtherDebts);
+    }
+
+    [Fact]
+    public void CustomAssetAndDebtDoNotMutateRealBalances()
+    {
+        var user = NewUser();
+        user.CustomAssets.Add(new CustomAsset
+        {
+            Id = Guid.NewGuid(), Name = "Car", Value = 10_000m, ExpectedAnnualGrowthPercent = 5m,
+        });
+        user.CustomDebts.Add(new CustomDebt
+        {
+            Id = Guid.NewGuid(), Name = "Card", Balance = 500m, AnnualInterestRatePercent = 20m,
+        });
+
+        ProjectionService.Project(user, new DateOnly(2026, 7, 13), 6);
+
+        Assert.Equal(10_000m, user.CustomAssets[0].Value);
+        Assert.Equal(500m, user.CustomDebts[0].Balance);
     }
 }

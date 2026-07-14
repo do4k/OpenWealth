@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, gbp, gbpExact } from '../api'
+import { useInlineEdit } from '../hooks/useInlineEdit'
 import type { Mortgage, MortgageRateType, Property } from '../types'
 
 interface MortgageForm {
@@ -24,6 +25,23 @@ const emptyMortgage: MortgageForm = {
   termMonthsRemaining: '',
 }
 
+function propertyRequest(p: Property) {
+  return { name: p.name, estimatedValue: p.estimatedValue }
+}
+
+function mortgageRequest(m: Mortgage) {
+  return {
+    name: m.name,
+    propertyId: m.propertyId,
+    outstandingBalance: m.outstandingBalance,
+    annualInterestRatePercent: m.annualInterestRatePercent,
+    rateType: m.rateType,
+    fixedRateEndDate: m.fixedRateEndDate,
+    followOnRatePercent: m.followOnRatePercent,
+    termMonthsRemaining: m.termMonthsRemaining,
+  }
+}
+
 export default function MortgagesPage() {
   const [properties, setProperties] = useState<Property[]>([])
   const [mortgages, setMortgages] = useState<Mortgage[]>([])
@@ -31,6 +49,8 @@ export default function MortgagesPage() {
   const [propValue, setPropValue] = useState('')
   const [form, setForm] = useState<MortgageForm>(emptyMortgage)
   const [error, setError] = useState<string | null>(null)
+  const propertyEdit = useInlineEdit<Property>()
+  const mortgageEdit = useInlineEdit<Mortgage>()
 
   const load = () => {
     api.get<Property[]>('/api/properties').then(setProperties).catch((e) => setError(e.message))
@@ -48,6 +68,18 @@ export default function MortgagesPage() {
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add property.')
+    }
+  }
+
+  async function saveProperty() {
+    if (!propertyEdit.draft) return
+    setError(null)
+    try {
+      await api.put(`/api/properties/${propertyEdit.editingId}`, propertyRequest(propertyEdit.draft))
+      propertyEdit.cancelEdit()
+      load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save property.')
     }
   }
 
@@ -70,6 +102,18 @@ export default function MortgagesPage() {
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add mortgage.')
+    }
+  }
+
+  async function saveMortgage() {
+    if (!mortgageEdit.draft) return
+    setError(null)
+    try {
+      await api.put(`/api/mortgages/${mortgageEdit.editingId}`, mortgageRequest(mortgageEdit.draft))
+      mortgageEdit.cancelEdit()
+      load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save mortgage.')
     }
   }
 
@@ -111,18 +155,39 @@ export default function MortgagesPage() {
               </tr>
             </thead>
             <tbody>
-              {properties.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.name}</td>
-                  <td className="num">{gbp.format(p.estimatedValue)}</td>
-                  <td className="num">{gbp.format(equity(p))}</td>
-                  <td className="num">
-                    <div className="row-actions">
-                      <button className="danger" onClick={() => removeProperty(p.id)}>Remove</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {properties.map((p) =>
+                propertyEdit.isEditing(p.id) && propertyEdit.draft ? (
+                  <tr key={p.id} className="editing-row">
+                    <td>
+                      <input value={propertyEdit.draft.name}
+                        onChange={(e) => propertyEdit.updateDraft({ name: e.target.value })} />
+                    </td>
+                    <td className="num">
+                      <input type="number" min="0" step="1000" value={propertyEdit.draft.estimatedValue}
+                        onChange={(e) => propertyEdit.updateDraft({ estimatedValue: Number(e.target.value) })} />
+                    </td>
+                    <td className="num">{gbp.format(equity(propertyEdit.draft))}</td>
+                    <td className="num">
+                      <div className="row-actions">
+                        <button onClick={saveProperty}>Save</button>
+                        <button className="secondary" onClick={propertyEdit.cancelEdit}>Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={p.id}>
+                    <td>{p.name}</td>
+                    <td className="num">{gbp.format(p.estimatedValue)}</td>
+                    <td className="num">{gbp.format(equity(p))}</td>
+                    <td className="num">
+                      <div className="row-actions">
+                        <button className="secondary" onClick={() => propertyEdit.startEdit(p)}>Edit</button>
+                        <button className="danger" onClick={() => removeProperty(p.id)}>Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         )}
@@ -143,53 +208,116 @@ export default function MortgagesPage() {
       <div className="card">
         <h2>Mortgages</h2>
         {mortgages.length > 0 && (
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Property</th>
-                <th className="num">Balance</th>
-                <th className="num">Rate</th>
-                <th>Type</th>
-                <th className="num">Term left</th>
-                <th className="num">Monthly</th>
-                <th className="num"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {mortgages.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.name}</td>
-                  <td>{propertyName(m.propertyId)}</td>
-                  <td className="num">{gbp.format(m.outstandingBalance)}</td>
-                  <td className="num">{m.annualInterestRatePercent}%</td>
-                  <td>
-                    {m.rateType === 'Fixed' ? (
-                      m.isFixedPeriodOver ? (
-                        <span className="badge warn">Fix ended — now variable</span>
-                      ) : (
-                        <span className="badge">
-                          Fixed{m.fixedRateEndDate ? ` until ${m.fixedRateEndDate}` : ''}
-                        </span>
-                      )
-                    ) : (
-                      <span className="badge warn">Variable</span>
-                    )}
-                    {m.rateType === 'Fixed' && m.followOnRatePercent != null && !m.isFixedPeriodOver && (
-                      <span className="muted"> then {m.followOnRatePercent}%</span>
-                    )}
-                  </td>
-                  <td className="num">{Math.floor(m.termMonthsRemaining / 12)}y {m.termMonthsRemaining % 12}m</td>
-                  <td className="num">{gbpExact.format(m.monthlyPayment)}</td>
-                  <td className="num">
-                    <div className="row-actions">
-                      <button className="danger" onClick={() => removeMortgage(m.id)}>Remove</button>
-                    </div>
-                  </td>
+          <div style={{ overflowX: 'auto' }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Property</th>
+                  <th className="num">Balance</th>
+                  <th className="num">Rate</th>
+                  <th>Type</th>
+                  <th className="num">Term left (months)</th>
+                  <th className="num">Monthly</th>
+                  <th className="num"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {mortgages.map((m) =>
+                  mortgageEdit.isEditing(m.id) && mortgageEdit.draft ? (
+                    <tr key={m.id} className="editing-row">
+                      <td>
+                        <input value={mortgageEdit.draft.name}
+                          onChange={(e) => mortgageEdit.updateDraft({ name: e.target.value })} />
+                      </td>
+                      <td>
+                        <select value={mortgageEdit.draft.propertyId ?? ''}
+                          onChange={(e) => mortgageEdit.updateDraft({ propertyId: e.target.value || null })}>
+                          <option value="">None</option>
+                          {properties.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="num">
+                        <input type="number" min="0" step="0.01" value={mortgageEdit.draft.outstandingBalance}
+                          onChange={(e) => mortgageEdit.updateDraft({ outstandingBalance: Number(e.target.value) })} />
+                      </td>
+                      <td className="num">
+                        <input type="number" min="0" max="30" step="0.01"
+                          value={mortgageEdit.draft.annualInterestRatePercent}
+                          onChange={(e) => mortgageEdit.updateDraft({
+                            annualInterestRatePercent: Number(e.target.value),
+                          })} />
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 140 }}>
+                          <select value={mortgageEdit.draft.rateType}
+                            onChange={(e) => mortgageEdit.updateDraft({ rateType: e.target.value as MortgageRateType })}>
+                            <option value="Fixed">Fixed</option>
+                            <option value="Variable">Variable</option>
+                          </select>
+                          {mortgageEdit.draft.rateType === 'Fixed' && (
+                            <>
+                              <input type="date" value={mortgageEdit.draft.fixedRateEndDate ?? ''}
+                                onChange={(e) => mortgageEdit.updateDraft({ fixedRateEndDate: e.target.value || null })} />
+                              <input type="number" min="0" max="30" step="0.01" placeholder="Follow-on %"
+                                value={mortgageEdit.draft.followOnRatePercent ?? ''}
+                                onChange={(e) => mortgageEdit.updateDraft({
+                                  followOnRatePercent: e.target.value ? Number(e.target.value) : null,
+                                })} />
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      <td className="num">
+                        <input type="number" min="1" step="1" value={mortgageEdit.draft.termMonthsRemaining}
+                          onChange={(e) => mortgageEdit.updateDraft({ termMonthsRemaining: Number(e.target.value) })} />
+                      </td>
+                      <td className="num">{gbpExact.format(m.monthlyPayment)}</td>
+                      <td className="num">
+                        <div className="row-actions">
+                          <button onClick={saveMortgage}>Save</button>
+                          <button className="secondary" onClick={mortgageEdit.cancelEdit}>Cancel</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={m.id}>
+                      <td>{m.name}</td>
+                      <td>{propertyName(m.propertyId)}</td>
+                      <td className="num">{gbp.format(m.outstandingBalance)}</td>
+                      <td className="num">{m.annualInterestRatePercent}%</td>
+                      <td>
+                        {m.rateType === 'Fixed' ? (
+                          m.isFixedPeriodOver ? (
+                            <span className="badge warn">Fix ended — now variable</span>
+                          ) : (
+                            <span className="badge">
+                              Fixed{m.fixedRateEndDate ? ` until ${m.fixedRateEndDate}` : ''}
+                            </span>
+                          )
+                        ) : (
+                          <span className="badge warn">Variable</span>
+                        )}
+                        {m.rateType === 'Fixed' && m.followOnRatePercent != null && !m.isFixedPeriodOver && (
+                          <span className="muted"> then {m.followOnRatePercent}%</span>
+                        )}
+                      </td>
+                      <td className="num">{Math.floor(m.termMonthsRemaining / 12)}y {m.termMonthsRemaining % 12}m</td>
+                      <td className="num">{gbpExact.format(m.monthlyPayment)}</td>
+                      <td className="num">
+                        <div className="row-actions">
+                          <button className="secondary" onClick={() => mortgageEdit.startEdit(m)}>Edit</button>
+                          <button className="danger" onClick={() => removeMortgage(m.id)}>Remove</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
         <form className="grid" onSubmit={addMortgage} style={{ marginTop: mortgages.length ? '1rem' : 0 }}>
           <div className="field">

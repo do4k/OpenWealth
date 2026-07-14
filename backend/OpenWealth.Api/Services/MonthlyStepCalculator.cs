@@ -98,6 +98,23 @@ public static class MonthlyStepCalculator
             Record("Mortgages", mortgage.Name, interest, payment, mortgage.OutstandingBalance);
         }
 
+        // Custom debts (credit cards, personal loans, car finance, ...) have
+        // no fixed term or amortisation schedule: interest accrues on the
+        // configured rate (if any) and the configured monthly payment (if
+        // any) is applied, never overpaying the balance.
+        foreach (var debt in user.CustomDebts)
+        {
+            if (debt.Balance <= 0)
+                continue;
+            var rate = debt.AnnualInterestRatePercent ?? 0m;
+            var interest = (debt.Balance * rate / 100m / 12m).RoundToPence();
+            var payment = Math.Min(debt.MonthlyPayment ?? 0m, (debt.Balance + interest).RoundToPence());
+            if (interest == 0 && payment == 0)
+                continue;
+            debt.Balance = (debt.Balance + interest - payment).RoundToPence();
+            Record("Other debts", debt.Name, interest, payment, debt.Balance);
+        }
+
         return events;
     }
 
@@ -125,10 +142,12 @@ public static class MonthlyStepCalculator
         var property = user.Properties.Sum(p => p.EstimatedValue);
         var savings = user.SavingsAccounts.Sum(s => s.Balance);
         var investments = user.Investments.Sum(i => i.CurrentValue);
+        var otherAssets = user.CustomAssets.Sum(a => a.Value);
         var mortgages = user.Mortgages.Sum(m => m.OutstandingBalance);
         var studentLoans = user.StudentLoans.Sum(l => l.Balance);
-        var assets = property + savings + investments;
-        var liabilities = mortgages + studentLoans;
+        var otherDebts = user.CustomDebts.Sum(d => d.Balance);
+        var assets = property + savings + investments + otherAssets;
+        var liabilities = mortgages + studentLoans + otherDebts;
         return new NetWorthSnapshot
         {
             Id = Guid.NewGuid(),
@@ -140,8 +159,10 @@ public static class MonthlyStepCalculator
             Property = property,
             Savings = savings,
             Investments = investments,
+            OtherAssets = otherAssets,
             Mortgages = mortgages,
             StudentLoans = studentLoans,
+            OtherDebts = otherDebts,
         };
     }
 }

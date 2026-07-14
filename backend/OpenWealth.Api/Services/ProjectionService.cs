@@ -29,6 +29,11 @@ public static class ProjectionService
                     investment.CurrentValue =
                         (investment.CurrentValue * (1 + growth / 100m / 12m)).RoundToPence();
             }
+            foreach (var asset in sim.CustomAssets)
+            {
+                if (asset.ExpectedAnnualGrowthPercent is { } growth && growth != 0)
+                    asset.Value = Math.Max(0m, (asset.Value * (1 + growth / 100m / 12m)).RoundToPence());
+            }
             points.Add(ToPoint(MonthlyStepCalculator.TakeSnapshot(sim, date)));
         }
         return points;
@@ -36,7 +41,8 @@ public static class ProjectionService
 
     private static ProjectionPoint ToPoint(NetWorthSnapshot s) => new(
         s.Date, s.NetWorth, s.TotalAssets, s.TotalLiabilities,
-        s.Property, s.Savings, s.Investments, s.Mortgages, s.StudentLoans);
+        s.Property, s.Savings, s.Investments, s.OtherAssets,
+        s.Mortgages, s.StudentLoans, s.OtherDebts);
 
     private static User Clone(User user) => new()
     {
@@ -82,6 +88,16 @@ public static class ProjectionService
         Properties = user.Properties.Select(p => new Property
         {
             Id = p.Id, Name = p.Name, EstimatedValue = p.EstimatedValue,
+        }).ToList(),
+        CustomAssets = user.CustomAssets.Select(a => new CustomAsset
+        {
+            Id = a.Id, Name = a.Name, Value = a.Value,
+            ExpectedAnnualGrowthPercent = a.ExpectedAnnualGrowthPercent,
+        }).ToList(),
+        CustomDebts = user.CustomDebts.Select(d => new CustomDebt
+        {
+            Id = d.Id, Name = d.Name, Balance = d.Balance,
+            AnnualInterestRatePercent = d.AnnualInterestRatePercent, MonthlyPayment = d.MonthlyPayment,
         }).ToList(),
     };
 }

@@ -57,6 +57,8 @@ app.MapPropertyEndpoints();
 app.MapMortgageEndpoints();
 app.MapSavingsEndpoints();
 app.MapInvestmentEndpoints();
+app.MapCustomAssetEndpoints();
+app.MapCustomDebtEndpoints();
 app.MapSummaryEndpoints();
 app.MapSettingsEndpoints();
 app.MapShareEndpoints();

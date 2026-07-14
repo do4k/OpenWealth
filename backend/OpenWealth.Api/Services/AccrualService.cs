@@ -53,6 +53,8 @@ public class AccrualService(AppDbContext db, ILogger<AccrualService> logger)
             .Include(u => u.Mortgages)
             .Include(u => u.Properties)
             .Include(u => u.Investments)
+            .Include(u => u.CustomAssets)
+            .Include(u => u.CustomDebts)
             .Where(u => u.Income != null && u.Income.AutomationEnabled)
             .ToListAsync(ct);
 

@@ -17,4 +17,6 @@ public class User
     public List<Mortgage> Mortgages { get; set; } = [];
     public List<SavingsAccount> SavingsAccounts { get; set; } = [];
     public List<Investment> Investments { get; set; } = [];
+    public List<CustomAsset> CustomAssets { get; set; } = [];
+    public List<CustomDebt> CustomDebts { get; set; } = [];
 }
