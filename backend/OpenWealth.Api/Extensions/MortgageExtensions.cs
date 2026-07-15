@@ -1,3 +1,4 @@
+using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Models;
 using OpenWealth.Api.Services;
 
@@ -6,8 +7,7 @@ namespace OpenWealth.Api.Extensions;
 public static class MortgageExtensions
 {
     /// <summary>Shapes a mortgage for API responses, adding computed payment/status fields.</summary>
-    public static object ToResponse(this Mortgage m) => new
-    {
+    public static MortgageResponse ToResponse(this Mortgage m) => new(
         m.Id,
         m.Name,
         m.PropertyId,
@@ -20,8 +20,7 @@ public static class MortgageExtensions
         m.ReinvestDestinationType,
         m.ReinvestDestinationId,
         m.ReinvestMonthlyAmount,
-        MonthlyPayment = MortgageCalculator.MonthlyPayment(m),
-        IsFixedPeriodOver = MortgageCalculator.IsFixedPeriodOver(m, DateOnly.FromDateTime(DateTime.UtcNow)),
-        IsPaidOff = m.OutstandingBalance <= 0,
-    };
+        MonthlyPayment: MortgageCalculator.MonthlyPayment(m),
+        IsFixedPeriodOver: MortgageCalculator.IsFixedPeriodOver(m, DateOnly.FromDateTime(DateTime.UtcNow)),
+        IsPaidOff: m.OutstandingBalance <= 0);
 }

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using OpenWealth.Api.Contracts.Requests;
+using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Data;
 using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
@@ -19,7 +20,7 @@ public static class GoalEndpoints
             var userId = p.UserId();
             var goals = await db.Goals.AsNoTracking()
                 .Where(g => g.UserId == userId).OrderBy(g => g.TargetDate).ToListAsync();
-            if (goals.Count == 0) return Results.Ok(Array.Empty<object>());
+            if (goals.Count == 0) return Results.Ok(Array.Empty<GoalResponse>());
 
             var user = await db.Users.AsNoTracking().WithWealthData().SingleAsync(u => u.Id == userId);
             var today = DateOnly.FromDateTime(DateTime.UtcNow);

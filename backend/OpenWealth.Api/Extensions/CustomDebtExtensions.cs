@@ -1,3 +1,4 @@
+using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Models;
 
 namespace OpenWealth.Api.Extensions;
@@ -5,8 +6,7 @@ namespace OpenWealth.Api.Extensions;
 public static class CustomDebtExtensions
 {
     /// <summary>Shapes a custom debt for API responses, adding the computed payoff flag.</summary>
-    public static object ToResponse(this CustomDebt d) => new
-    {
+    public static CustomDebtResponse ToResponse(this CustomDebt d) => new(
         d.Id,
         d.Name,
         d.Balance,
@@ -16,6 +16,5 @@ public static class CustomDebtExtensions
         d.ReinvestDestinationType,
         d.ReinvestDestinationId,
         d.ReinvestMonthlyAmount,
-        IsPaidOff = d.Balance <= 0,
-    };
+        IsPaidOff: d.Balance <= 0);
 }

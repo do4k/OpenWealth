@@ -13,24 +13,17 @@ public static class TrendPointExtensions
         p.Date, p.NetWorth, p.TotalAssets, p.TotalLiabilities, p.Property,
         p.Savings, p.Investments, p.OtherAssets, p.Mortgages, p.StudentLoans, p.OtherDebts);
 
-    /// <summary>Shapes a trend point down to what a given public-profile visibility tier allows.</summary>
+    /// <summary>
+    /// Shapes a trend point down to what a given public-profile visibility
+    /// tier allows. Returns <see cref="object"/> rather than a common base
+    /// type — see the equivalent note on <see cref="WealthSummaryExtensions.ToShareView"/>.
+    /// </summary>
     public static object ToShareView(this TrendPoint p, ShareVisibility visibility) => visibility switch
     {
-        ShareVisibility.NetWorthOnly => new { p.Date, p.NetWorth },
-        ShareVisibility.CategoryTotals => new { p.Date, p.NetWorth, p.TotalAssets, p.TotalLiabilities },
-        _ => new
-        {
-            p.Date,
-            p.NetWorth,
-            p.TotalAssets,
-            p.TotalLiabilities,
-            p.Property,
-            p.Savings,
-            p.Investments,
-            p.OtherAssets,
-            p.Mortgages,
-            p.StudentLoans,
-            p.OtherDebts,
-        },
+        ShareVisibility.NetWorthOnly => new TrendPointNetWorthOnlyView(p.Date, p.NetWorth),
+        ShareVisibility.CategoryTotals => new TrendPointCategoryTotalsView(p.Date, p.NetWorth, p.TotalAssets, p.TotalLiabilities),
+        _ => new TrendPointFullBreakdownView(
+            p.Date, p.NetWorth, p.TotalAssets, p.TotalLiabilities, p.Property,
+            p.Savings, p.Investments, p.OtherAssets, p.Mortgages, p.StudentLoans, p.OtherDebts),
     };
 }
