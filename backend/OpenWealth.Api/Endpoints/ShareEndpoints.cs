@@ -109,15 +109,15 @@ public static class ShareEndpoints
 
     // Extends WealthSummaryExtensions.ToShareView's tiers (via record
     // inheritance, not composition of anonymous types) with the
-    // History/Projection fields this route adds on top. Returns object, not
-    // a common base type — see the note on WealthSummaryExtensions.ToShareView
+    // History/Projection fields this route adds on top. A OneOf, not a
+    // common base type — see the note on WealthSummaryExtensions.ToShareView
     // for why: serializing through a shared base type would silently drop
     // every field the base type doesn't declare, regressing the "lower tiers
     // never receive higher-tier fields over the wire" guarantee this route
     // is tested against.
-    private static object BuildPublicView(
+    private static PublicProfileTierView BuildPublicView(
         User user, ShareVisibility visibility, WealthSummary summary,
-        IEnumerable<object> history, IEnumerable<object> projection) =>
+        IEnumerable<TrendPointTierView> history, IEnumerable<TrendPointTierView> projection) =>
         visibility switch
         {
             ShareVisibility.NetWorthOnly => new PublicProfileNetWorthOnlyView(

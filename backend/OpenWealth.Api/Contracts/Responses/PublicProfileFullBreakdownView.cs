@@ -7,5 +7,5 @@ public record PublicProfileFullBreakdownView(
     string DisplayName, ShareVisibility Visibility, decimal NetWorth,
     decimal TotalAssets, decimal TotalLiabilities, List<CategoryTotal> AssetTotals, List<CategoryTotal> LiabilityTotals,
     List<NetWorthItem> Items,
-    IEnumerable<object> History, IEnumerable<object> Projection)
+    IEnumerable<TrendPointTierView> History, IEnumerable<TrendPointTierView> Projection)
     : FullBreakdownShareView(DisplayName, Visibility, NetWorth, TotalAssets, TotalLiabilities, AssetTotals, LiabilityTotals, Items);

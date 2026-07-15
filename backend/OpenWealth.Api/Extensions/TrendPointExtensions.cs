@@ -15,10 +15,11 @@ public static class TrendPointExtensions
 
     /// <summary>
     /// Shapes a trend point down to what a given public-profile visibility
-    /// tier allows. Returns <see cref="object"/> rather than a common base
-    /// type — see the equivalent note on <see cref="WealthSummaryExtensions.ToShareView"/>.
+    /// tier allows. A <see cref="TrendPointTierView"/> (OneOf) rather than a
+    /// common base type — see the equivalent note on
+    /// <see cref="WealthSummaryExtensions.ToShareView"/>.
     /// </summary>
-    public static object ToShareView(this TrendPoint p, ShareVisibility visibility) => visibility switch
+    public static TrendPointTierView ToShareView(this TrendPoint p, ShareVisibility visibility) => visibility switch
     {
         ShareVisibility.NetWorthOnly => new TrendPointNetWorthOnlyView(p.Date, p.NetWorth),
         ShareVisibility.CategoryTotals => new TrendPointCategoryTotalsView(p.Date, p.NetWorth, p.TotalAssets, p.TotalLiabilities),

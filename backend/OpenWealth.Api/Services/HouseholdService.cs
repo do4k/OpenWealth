@@ -137,7 +137,7 @@ public class HouseholdService(AppDbContext db)
                 (m, u) => new { m.UserId, u.DisplayName, m.Visibility })
             .ToListAsync(ct);
 
-        var views = new List<object>();
+        var views = new List<ShareTierView>();
         var totalNetWorth = 0m;
         // Sequential by design: SummaryService shares this request's scoped
         // AppDbContext, which isn't safe for concurrent operations, and

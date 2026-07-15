@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OpenWealth.Api.Data;
 using OpenWealth.Api.Endpoints;
+using OpenWealth.Api.Json;
 using OpenWealth.Api.Models;
 using OpenWealth.Api.Services;
 
@@ -36,7 +37,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.SerializerOptions.Converters.Add(new OneOfJsonConverterFactory());
+});
 
 // The Vite dev server proxies /api in development, but allow direct calls too.
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
