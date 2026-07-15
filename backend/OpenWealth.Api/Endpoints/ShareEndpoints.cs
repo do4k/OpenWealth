@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenWealth.Api.Contracts.Requests;
+using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Data;
 using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
@@ -102,45 +103,54 @@ public static class ShareEndpoints
             var projection = ProjectionService.Project(user, DateOnly.FromDateTime(DateTime.UtcNow), 300)
                 .Select(pt => pt.ToTrendPoint().ToShareView(settings.Visibility));
 
-            object view = settings.Visibility switch
-            {
-                ShareVisibility.NetWorthOnly => new
-                {
-                    user.DisplayName,
-                    settings.Visibility,
-                    summary.NetWorth,
-                    History = history,
-                    Projection = projection,
-                },
-                ShareVisibility.CategoryTotals => new
-                {
-                    user.DisplayName,
-                    settings.Visibility,
-                    summary.NetWorth,
-                    summary.TotalAssets,
-                    summary.TotalLiabilities,
-                    summary.AssetTotals,
-                    summary.LiabilityTotals,
-                    History = history,
-                    Projection = projection,
-                },
-                _ => new
-                {
-                    user.DisplayName,
-                    settings.Visibility,
-                    summary.NetWorth,
-                    summary.TotalAssets,
-                    summary.TotalLiabilities,
-                    summary.AssetTotals,
-                    summary.LiabilityTotals,
-                    summary.Items,
-                    History = history,
-                    Projection = projection,
-                },
-            };
-            return Results.Ok(view);
+            return Results.Ok(BuildPublicView(user, settings.Visibility, summary, history, projection));
         });
     }
+
+    // Not expressed via WealthSummaryExtensions.ToShareView: that helper's
+    // anonymous-typed tiers can't be merged with the History/Projection
+    // fields below without either nesting the response (breaking this
+    // route's flat JSON shape) or reintroducing nullable per-tier fields —
+    // both would regress the "lower tiers never receive higher-tier fields
+    // over the wire" guarantee this route is tested against.
+    private static object BuildPublicView(
+        User user, ShareVisibility visibility, WealthSummary summary, object history, object projection) =>
+        visibility switch
+        {
+            ShareVisibility.NetWorthOnly => new
+            {
+                user.DisplayName,
+                Visibility = visibility,
+                summary.NetWorth,
+                History = history,
+                Projection = projection,
+            },
+            ShareVisibility.CategoryTotals => new
+            {
+                user.DisplayName,
+                Visibility = visibility,
+                summary.NetWorth,
+                summary.TotalAssets,
+                summary.TotalLiabilities,
+                summary.AssetTotals,
+                summary.LiabilityTotals,
+                History = history,
+                Projection = projection,
+            },
+            _ => new
+            {
+                user.DisplayName,
+                Visibility = visibility,
+                summary.NetWorth,
+                summary.TotalAssets,
+                summary.TotalLiabilities,
+                summary.AssetTotals,
+                summary.LiabilityTotals,
+                summary.Items,
+                History = history,
+                Projection = projection,
+            },
+        };
 
     private static string NewSlug() =>
         Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();

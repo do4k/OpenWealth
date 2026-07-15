@@ -71,12 +71,8 @@ public static class InvestmentEndpoints
 
     // At most one investment per user receives the income-page pension
     // contributions — enabling it on one clears it from any other.
-    private static async Task ClearOtherPensionContributionFlags(AppDbContext db, Guid userId, Guid? exceptId)
-    {
-        var others = await db.Investments
+    private static Task ClearOtherPensionContributionFlags(AppDbContext db, Guid userId, Guid? exceptId) =>
+        db.Investments
             .Where(i => i.UserId == userId && i.ReceivesIncomePensionContributions && i.Id != exceptId)
-            .ToListAsync();
-        foreach (var other in others)
-            other.ReceivesIncomePensionContributions = false;
-    }
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.ReceivesIncomePensionContributions, false));
 }

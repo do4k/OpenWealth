@@ -17,6 +17,9 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<SummaryService>();
 builder.Services.AddScoped<AccrualService>();
+builder.Services.AddScoped<HouseholdService>();
+builder.Services.AddScoped<AutomationService>();
+builder.Services.AddScoped<AuthService>();
 builder.Services.AddHostedService<AccrualWorker>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

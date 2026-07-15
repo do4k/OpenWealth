@@ -16,36 +16,16 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth");
 
-        group.MapPost("/register", async (RegisterRequest req, AppDbContext db,
-            IPasswordHasher<User> hasher, TokenService tokens) =>
+        group.MapPost("/register", async (RegisterRequest req, AuthService auth) =>
         {
-            var email = req.Email.Trim().ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
-                return Results.BadRequest(new { error = "A valid email address is required." });
-            if (req.Password.Length < 10)
-                return Results.BadRequest(new { error = "Password must be at least 10 characters." });
-            if (string.IsNullOrWhiteSpace(req.DisplayName))
-                return Results.BadRequest(new { error = "A display name is required." });
-            if (await db.Users.AnyAsync(u => u.Email == email))
-                return Results.Conflict(new { error = "An account with that email already exists." });
-
-            var user = new User
+            try
             {
-                Id = Guid.NewGuid(),
-                Email = email,
-                DisplayName = req.DisplayName.Trim(),
-                PasswordHash = "",
-                CreatedAtUtc = DateTime.UtcNow,
-            };
-            user.PasswordHash = hasher.HashPassword(user, req.Password);
-
-            // Every account starts with editable UK tax-year defaults.
-            db.Users.Add(user);
-            db.TaxSettings.Add(UkDefaults.NewTaxSettings(user.Id));
-            db.StudentLoanPlanSettings.AddRange(UkDefaults.NewStudentLoanPlanSettings(user.Id));
-            await db.SaveChangesAsync();
-
-            return Results.Ok(new AuthResponse(tokens.CreateToken(user), user.Email, user.DisplayName));
+                return Results.Ok(await auth.RegisterAsync(req.Email, req.Password, req.DisplayName));
+            }
+            catch (DomainException ex)
+            {
+                return ex.ToResult();
+            }
         });
 
         group.MapPost("/login", async (LoginRequest req, AppDbContext db,

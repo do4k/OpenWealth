@@ -25,34 +25,17 @@ public static class AutomationEndpoints
             });
         });
 
-        automation.MapPut("/", async (AutomationSettingsRequest req, ClaimsPrincipal p, AppDbContext db) =>
+        automation.MapPut("/", async (AutomationSettingsRequest req, ClaimsPrincipal p, AutomationService automationService) =>
         {
-            if (req.PaydayDayOfMonth is < 1 or > 31)
-                return Results.BadRequest(new { error = "Payday must be a day of the month (1–31)." });
-
-            var user = await LoadUser(p.UserId(), db);
-            if (user.Income is null)
-                return Results.BadRequest(new { error = "Set up your income before enabling automation." });
-
-            var enabling = req.Enabled && !user.Income.AutomationEnabled;
-            user.Income.AutomationEnabled = req.Enabled;
-            user.Income.PaydayDayOfMonth = req.PaydayDayOfMonth;
-            if (enabling)
+            try
             {
-                // Start tracking from today: record the opening snapshot and
-                // only apply paydays that happen from now on.
-                var today = DateOnly.FromDateTime(DateTime.UtcNow);
-                user.Income.LastAccrualDate ??= today;
-                if (!await db.NetWorthSnapshots.AnyAsync(s => s.UserId == user.Id && s.Date == today))
-                    db.NetWorthSnapshots.Add(MonthlyStepCalculator.TakeSnapshot(user, today));
+                var income = await automationService.SetAsync(p.UserId(), req.Enabled, req.PaydayDayOfMonth);
+                return Results.Ok(new { Enabled = income.AutomationEnabled, income.PaydayDayOfMonth, income.LastAccrualDate });
             }
-            await db.SaveChangesAsync();
-            return Results.Ok(new
+            catch (DomainException ex)
             {
-                Enabled = user.Income.AutomationEnabled,
-                user.Income.PaydayDayOfMonth,
-                user.Income.LastAccrualDate,
-            });
+                return ex.ToResult();
+            }
         });
 
         // Applies any due paydays immediately instead of waiting for the worker.
