@@ -65,6 +65,7 @@ app.MapSummaryEndpoints();
 app.MapSettingsEndpoints();
 app.MapShareEndpoints();
 app.MapAutomationEndpoints();
+app.MapHouseholdEndpoints();
 
 // Serve the built React app (frontend/dist copied to wwwroot) in production.
 app.UseDefaultFiles();
