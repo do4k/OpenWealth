@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CustomAsset> CustomAssets => Set<CustomAsset>();
     public DbSet<CustomDebt> CustomDebts => Set<CustomDebt>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<Goal> Goals => Set<Goal>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +62,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(s => new { s.UserId, s.Date });
             e.HasOne<User>().WithMany().HasForeignKey(s => s.UserId);
+        });
+
+        modelBuilder.Entity<Goal>(e =>
+        {
+            e.HasIndex(g => new { g.UserId, g.TargetDate });
+            e.HasOne<User>().WithMany().HasForeignKey(g => g.UserId);
         });
 
         modelBuilder.Entity<Property>()

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, gbp, gbpExact } from '../api'
 import { TrendChart, TREND_HORIZONS, WEALTH_SERIES } from '../components/TrendChart'
-import type { AccrualEvent, AutomationSettings, HistoryResponse, WealthPoint } from '../types'
+import type { AccrualEvent, AutomationSettings, Goal, HistoryResponse, WealthPoint } from '../types'
 
 const monthYear = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
@@ -10,19 +10,28 @@ export default function TrendsPage() {
   const [automation, setAutomation] = useState<AutomationSettings | null>(null)
   const [history, setHistory] = useState<HistoryResponse | null>(null)
   const [projection, setProjection] = useState<WealthPoint[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
   const [months, setMonths] = useState(60)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [showTable, setShowTable] = useState(false)
+  // Guards against an in-flight request for a previous horizon resolving
+  // after a newer one and clobbering it with stale data.
+  const requestToken = useRef(0)
 
   const loadData = (horizon: number) => {
-    api.get<HistoryResponse>('/api/history').then(setHistory).catch((e) => setError(e.message))
+    const token = ++requestToken.current
+    api.get<HistoryResponse>('/api/history')
+      .then((h) => { if (requestToken.current === token) setHistory(h) })
+      .catch((e) => setError(e.message))
     api.get<WealthPoint[]>(`/api/projections?months=${horizon}`)
-      .then(setProjection).catch((e) => setError(e.message))
+      .then((p) => { if (requestToken.current === token) setProjection(p) })
+      .catch((e) => setError(e.message))
   }
 
   useEffect(() => {
     api.get<AutomationSettings>('/api/automation').then(setAutomation).catch((e) => setError(e.message))
+    api.get<Goal[]>('/api/goals').then(setGoals).catch((e) => setError(e.message))
     loadData(months)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -143,11 +152,17 @@ export default function TrendsPage() {
           series={WEALTH_SERIES}
           emptyMessage="Not enough data yet — enable payday automation above to start recording history,
             or add balances and rates so projections have something to work from."
+          markers={goals
+            .filter((g) => g.metric === 'NetWorth')
+            .map((g) => ({ date: g.targetDate, label: g.name, onTrack: g.onTrack }))}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <p className="muted" style={{ margin: 0 }}>
             Solid lines are recorded history; dashed lines are projected from today's balances,
             rates and repayments. Liabilities are shown as the amount owed.
+            {goals.some((g) => g.metric === 'NetWorth') && (
+              ' Vertical markers are your net worth goals’ target dates — green if on track, amber if not.'
+            )}
           </p>
           <button type="button" className="link-button" onClick={() => setShowTable((v) => !v)}>
             {showTable ? 'Hide data table' : 'Show data table'}
