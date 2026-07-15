@@ -107,49 +107,27 @@ public static class ShareEndpoints
         });
     }
 
-    // Not expressed via WealthSummaryExtensions.ToShareView: that helper's
-    // anonymous-typed tiers can't be merged with the History/Projection
-    // fields below without either nesting the response (breaking this
-    // route's flat JSON shape) or reintroducing nullable per-tier fields —
-    // both would regress the "lower tiers never receive higher-tier fields
-    // over the wire" guarantee this route is tested against.
+    // Extends WealthSummaryExtensions.ToShareView's tiers (via record
+    // inheritance, not composition of anonymous types) with the
+    // History/Projection fields this route adds on top. Returns object, not
+    // a common base type — see the note on WealthSummaryExtensions.ToShareView
+    // for why: serializing through a shared base type would silently drop
+    // every field the base type doesn't declare, regressing the "lower tiers
+    // never receive higher-tier fields over the wire" guarantee this route
+    // is tested against.
     private static object BuildPublicView(
-        User user, ShareVisibility visibility, WealthSummary summary, object history, object projection) =>
+        User user, ShareVisibility visibility, WealthSummary summary,
+        IEnumerable<object> history, IEnumerable<object> projection) =>
         visibility switch
         {
-            ShareVisibility.NetWorthOnly => new
-            {
-                user.DisplayName,
-                Visibility = visibility,
-                summary.NetWorth,
-                History = history,
-                Projection = projection,
-            },
-            ShareVisibility.CategoryTotals => new
-            {
-                user.DisplayName,
-                Visibility = visibility,
-                summary.NetWorth,
-                summary.TotalAssets,
-                summary.TotalLiabilities,
-                summary.AssetTotals,
-                summary.LiabilityTotals,
-                History = history,
-                Projection = projection,
-            },
-            _ => new
-            {
-                user.DisplayName,
-                Visibility = visibility,
-                summary.NetWorth,
-                summary.TotalAssets,
-                summary.TotalLiabilities,
-                summary.AssetTotals,
-                summary.LiabilityTotals,
-                summary.Items,
-                History = history,
-                Projection = projection,
-            },
+            ShareVisibility.NetWorthOnly => new PublicProfileNetWorthOnlyView(
+                user.DisplayName, visibility, summary.NetWorth, history, projection),
+            ShareVisibility.CategoryTotals => new PublicProfileCategoryTotalsView(
+                user.DisplayName, visibility, summary.NetWorth, summary.TotalAssets, summary.TotalLiabilities,
+                summary.AssetTotals, summary.LiabilityTotals, history, projection),
+            _ => new PublicProfileFullBreakdownView(
+                user.DisplayName, visibility, summary.NetWorth, summary.TotalAssets, summary.TotalLiabilities,
+                summary.AssetTotals, summary.LiabilityTotals, summary.Items, history, projection),
         };
 
     private static string NewSlug() =>

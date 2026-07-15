@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OpenWealth.Api.Contracts.Responses;
 using OpenWealth.Api.Data;
 using OpenWealth.Api.Extensions;
 using OpenWealth.Api.Models;
@@ -12,25 +13,23 @@ namespace OpenWealth.Api.Services;
 /// </summary>
 public class HouseholdService(AppDbContext db)
 {
-    public async Task<object> GetViewAsync(Guid userId, CancellationToken ct = default)
+    public async Task<HouseholdView> GetViewAsync(Guid userId, CancellationToken ct = default)
     {
         var myMembership = await db.HouseholdMembers.AsNoTracking()
             .SingleOrDefaultAsync(m => m.UserId == userId, ct);
         if (myMembership is null)
-            return new { InHousehold = false };
+            return new HouseholdView(InHousehold: false);
 
         var members = await db.HouseholdMembers.AsNoTracking()
             .Where(m => m.HouseholdId == myMembership.HouseholdId)
             .Join(db.Users.AsNoTracking(), m => m.UserId, u => u.Id, (m, u) => new { Member = m, User = u })
             .ToListAsync(ct);
 
-        return new
-        {
-            InHousehold = true,
-            MyStatus = myMembership.Status,
-            MyVisibility = myMembership.Visibility,
-            Members = members.Select(x => x.Member.ToMemberView(x.User, userId)),
-        };
+        return new HouseholdView(
+            InHousehold: true,
+            MyStatus: myMembership.Status,
+            MyVisibility: myMembership.Visibility,
+            Members: members.Select(x => x.Member.ToMemberView(x.User, userId)).ToList());
     }
 
     public async Task InviteAsync(Guid userId, string email, CancellationToken ct = default)
@@ -125,7 +124,7 @@ public class HouseholdService(AppDbContext db)
         return true;
     }
 
-    public async Task<object> BuildSummaryAsync(Guid userId, SummaryService summaries, CancellationToken ct = default)
+    public async Task<HouseholdSummaryView> BuildSummaryAsync(Guid userId, SummaryService summaries, CancellationToken ct = default)
     {
         var myMembership = await db.HouseholdMembers.AsNoTracking()
             .SingleOrDefaultAsync(m => m.UserId == userId && m.Status == HouseholdMemberStatus.Active, ct);
@@ -150,6 +149,6 @@ public class HouseholdService(AppDbContext db)
             views.Add(summary.ToShareView(member.DisplayName, member.Visibility));
         }
 
-        return new { TotalNetWorth = totalNetWorth, Members = views };
+        return new HouseholdSummaryView(totalNetWorth, views);
     }
 }
